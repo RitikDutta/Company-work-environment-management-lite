@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Face Detection with face-api.js</title>
+  
+  <!-- Load the browser-ready face-api.js build from CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  
+  <!-- Load your custom script after face-api.js -->
+  <script defer src="script.js"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+      position: relative;
+    }
+    #video {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      border: 1px solid #ddd;
+    }
+    #overlay {
+      position: absolute;
+      top: 20px; /* Adjust to align with video */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 640px;
+      height: 480px;
+      pointer-events: none; /* Allow clicks to pass through */
+    }
+    #status {
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Real-Time Face Detection using face-api.js</h2>
+  <div id="status">Loading face-api.js models, please wait...</div>
+
+  <!-- Container for video and overlay -->
+  <div style="position: relative; display: inline-block;">
+    <video id="video" autoplay muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+</body>
+</html>
