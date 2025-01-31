@@ -41,6 +41,9 @@
 <body>
   <h2>Real-Time Face Detection using face-api.js</h2>
   <div id="status">Loading face-api.js models, please wait...</div>
+  <button onclick="registerFace('Alice')">Register Alice</button>
+<button onclick="createFaceMatcher()">Create Face Matcher</button>
+<button onclick="recognizeFaces()">Start Recognition</button>
 
   <!-- Container for video and overlay -->
   <div style="position: relative; display: inline-block;">
