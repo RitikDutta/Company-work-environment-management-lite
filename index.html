@@ -2,53 +2,202 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Real-Time Face Detection with face-api.js</title>
-  
-  <!-- Load the browser-ready face-api.js build from CDN -->
+  <title>Face Registration & Recognition with face-api.js</title>
+  <!-- Load the face-api.js library (browser build) from CDN -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-  
-  <!-- Load your custom script after face-api.js -->
-  <script defer src="script.js"></script>
-  
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       margin: 20px;
-      position: relative;
     }
-    #video {
+    #video, #overlay {
       position: relative;
       width: 640px;
       height: 480px;
-      border: 1px solid #ddd;
+      border: 1px solid #ccc;
+      margin-top: 10px;
     }
-    #overlay {
-      position: absolute;
-      top: 20px; /* Adjust to align with video */
-      left: 50%;
-      transform: translateX(-50%);
-      width: 640px;
-      height: 480px;
-      pointer-events: none; /* Allow clicks to pass through */
+    #controls {
+      margin-bottom: 10px;
     }
     #status {
-      margin-bottom: 10px;
+      margin-top: 10px;
       font-weight: bold;
+      color: green;
     }
   </style>
 </head>
 <body>
-  <h2>Real-Time Face Detection using face-api.js</h2>
-  <div id="status">Loading face-api.js models, please wait...</div>
-  <button onclick="registerFace('Alice')">Register Alice</button>
-<button onclick="createFaceMatcher()">Create Face Matcher</button>
-<button onclick="recognizeFaces()">Start Recognition</button>
+  <h1>Face Registration & Recognition</h1>
 
-  <!-- Container for video and overlay -->
-  <div style="position: relative; display: inline-block;">
-    <video id="video" autoplay muted></video>
-    <canvas id="overlay"></canvas>
+  <div id="controls">
+    <label>
+      Enter Name:
+      <input type="text" id="nameInput" placeholder="e.g. Alice" />
+    </label>
+    <button id="registerBtn">Register Face</button>
+    <button id="createMatcherBtn">Create Matcher</button>
+    <button id="startRecBtn">Start Recognition</button>
   </div>
+
+  <div id="status">Loading face-api.js models, please wait...</div>
+  
+  <!-- Webcam Video -->
+  <video id="video" autoplay muted></video>
+  <!-- Canvas Overlay for Drawing Boxes/Labels -->
+  <canvas id="overlay"></canvas>
+
+  <script>
+    // ---------------------------------------
+    // GLOBAL VARIABLES
+    // ---------------------------------------
+    let descriptorsByLabel = {};  // { label: [Float32Array, Float32Array, ...], ... }
+    let faceMatcher = null;
+    let videoStream = null;
+
+    // ---------------------------------------
+    // 1. LOAD MODELS & START VIDEO
+    // ---------------------------------------
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Load the face-api.js models from your local /models folder
+      try {
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('./models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('./models')
+          // Optionally load face expression model if you want
+          // faceapi.nets.faceExpressionNet.loadFromUri('./models')
+        ]);
+        document.getElementById('status').textContent = 'Models loaded! Initializing webcam...';
+      } catch (err) {
+        document.getElementById('status').textContent = 'Error loading models: ' + err;
+        console.error(err);
+        return;
+      }
+
+      // Access user webcam
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const video = document.getElementById('video');
+        video.srcObject = videoStream;
+        video.onloadedmetadata = () => {
+          video.play();
+          document.getElementById('status').textContent = 'Webcam initialized. Ready to register faces.';
+        };
+      } catch (err) {
+        document.getElementById('status').textContent = 'Error accessing webcam: ' + err;
+        console.error(err);
+      }
+    });
+
+    // ---------------------------------------
+    // 2. REGISTER A FACE (Capture Embeddings)
+    // ---------------------------------------
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const name = document.getElementById('nameInput').value.trim();
+      if (!name) {
+        alert('Please enter a name before registering.');
+        return;
+      }
+      const video = document.getElementById('video');
+      
+      // Detect a single face in the current video frame
+      const detection = await faceapi.detectSingleFace(
+        video,
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks().withFaceDescriptor();
+
+      if (!detection) {
+        document.getElementById('status').textContent = 'No face detected. Please position your face clearly.';
+        return;
+      }
+
+      // We have a 128-d embedding vector for the face
+      const descriptor = detection.descriptor; // Float32Array(128)
+
+      // Store the descriptor under this label
+      if (!descriptorsByLabel[name]) {
+        descriptorsByLabel[name] = [];
+      }
+      descriptorsByLabel[name].push(descriptor);
+
+      document.getElementById('status').textContent = `Face registered for "${name}". Total samples for ${name}: ${descriptorsByLabel[name].length}`;
+      console.log(`Registered descriptor for ${name}`, descriptor);
+    });
+
+    // ---------------------------------------
+    // 3. CREATE FACE MATCHER
+    // ---------------------------------------
+    document.getElementById('createMatcherBtn').addEventListener('click', () => {
+      const labeledFaceDescriptors = [];
+      for (const label in descriptorsByLabel) {
+        // Each label can have multiple descriptor samples
+        labeledFaceDescriptors.push(
+          new faceapi.LabeledFaceDescriptors(
+            label,  // The person's name
+            descriptorsByLabel[label] // Array of Float32Array
+          )
+        );
+      }
+
+      // Initialize a FaceMatcher with a distance threshold
+      // Lower threshold -> stricter matches, default is around 0.6
+      faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+
+      document.getElementById('status').textContent = 'Face Matcher created! You can now start recognition.';
+      console.log('FaceMatcher:', faceMatcher);
+    });
+
+    // ---------------------------------------
+    // 4. START RECOGNITION (REAL-TIME PREDICTION)
+    // ---------------------------------------
+    document.getElementById('startRecBtn').addEventListener('click', () => {
+      if (!faceMatcher) {
+        alert('Please create the matcher first!');
+        return;
+      }
+      document.getElementById('status').textContent = 'Recognition started. Looking for registered faces...';
+      recognizeFaces();
+    });
+
+    async function recognizeFaces() {
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('overlay');
+      const ctx = canvas.getContext('2d');
+
+      // Match canvas size to video size
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      // Continually detect in a loop using requestAnimationFrame
+      requestAnimationFrame(recognizeFaces);
+
+      // Detect all faces in the current video frame
+      const detections = await faceapi.detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks().withFaceDescriptors();
+
+      // Clear the previous drawings
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      detections.forEach(detection => {
+        const { x, y, width, height } = detection.detection.box;
+        // Find best match in FaceMatcher
+        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
+        
+        // Draw bounding box
+        ctx.strokeStyle = '#00FF00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+
+        // Draw label (name + distance)
+        ctx.fillStyle = '#00FF00';
+        ctx.font = '16px Arial';
+        ctx.fillText(bestMatch.toString(), x, y - 5);
+      });
+    }
+  </script>
 </body>
 </html>
