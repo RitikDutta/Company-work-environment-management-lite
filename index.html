@@ -179,6 +179,9 @@
         new faceapi.TinyFaceDetectorOptions()
       ).withFaceLandmarks().withFaceDescriptors();
 
+      console.log("Detections:", detections); // <-- Debug!
+
+
       // Clear the previous drawings
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
