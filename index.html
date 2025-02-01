@@ -225,25 +225,26 @@
     // 6. Real-Time Recognition Loop
     // -----------------------------------------------------
     async function recognitionLoop() {
-      requestAnimationFrame(recognitionLoop);
+      if (!faceMatcher) return; // Safety check
 
-      // Detect all faces
-      const detections = await faceapi.detectAllFaces(
-        videoEl,
-        new faceapi.TinyFaceDetectorOptions()
-      ).withFaceLandmarks().withFaceDescriptors();
+      try {
+        const detections = await faceapi.detectAllFaces(
+          videoEl,
+          new faceapi.TinyFaceDetectorOptions()
+        ).withFaceLandmarks().withFaceDescriptors();
 
-      if (!detections.length) {
-        // No face detected
-        labelOnVideoEl.textContent = 'No face detected';
-        return;
+        if (!detections.length) {
+          labelOnVideoEl.textContent = 'No face detected';
+        } else {
+          const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
+          labelOnVideoEl.textContent = `Detected: ${bestMatch.toString()}`;
+        }
+      } catch (err) {
+        console.error('Detection error:', err);
       }
 
-      // For simplicity, let's take the first detected face:
-      const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
-      // bestMatch.toString() returns e.g. "Alice (distance: 0.53)"
-      labelOnVideoEl.textContent = `Detected: ${bestMatch.toString()}`;
-      // If you'd like to handle multiple faces, you could iterate over detections
+      // Continue the loop
+      requestAnimationFrame(recognitionLoop);
     }
   </script>
 </body>
