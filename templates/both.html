@@ -7,6 +7,8 @@
          src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
       <!-- mediapipe -->
       <meta charset="utf-8">
+      <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
       <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -20,7 +22,8 @@
       <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils_3d/control_utils_3d.js" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
       <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
-      <script>
+      <!-- function use to update time (used in full version of app)-->
+      <!-- <script>
          $(document).ready(function() {
              // Function to update the time
              function updateTime() {
@@ -38,7 +41,7 @@
              // Update the time every second
              setInterval(updateTime, 1000);
          });
-      </script>
+      </script> -->
       <style type="text/css">
          iframe {
          width: 50%;
@@ -138,218 +141,306 @@
          -moz-border-radius:25px;
          width: 40%;
          }
+         .text3{
+          text-align: center;
+         }
       </style>
       <title></title>
    </head>
-   <body onload="update_values();">
-      <div class="toggle-container">
-         <label class="toggle">
-         <input type="checkbox" id="slider" checked>
-         <span class="slider"></span>
-         <span class="text1">MTCNN</span>
-         <span class="text2">Haarcascade</span>
-         </label>
-         <p>Note. Choosing the <span class="light_model" style="color: '#2196F3';">light model</span> may lead to reduced accuracy in low lighting conditions. It is important to consider that the <span class="heavy_model">heavy model</span> may result in slower performance.</p>
+   <!-- <body onload="update_values();">  (used in main app)-->
+    <body>
+      <!-- Title & Controls -->
+      <h1>Face Recognition Page</h1>
+    
+      <div id="status">Status messages will appear here...</div>
+    
+      <!-- Mediapipe uses <video class="input_video"> plus canvas. -->
+      <div class="container">
+        <video class="input_video" style="display: none;" autoplay muted playsinline></video>
+    
+        <!-- Mediapipe draws on these canvases: -->
+        <canvas class="output_canvas" width="640" height="480"></canvas>
+        <canvas class="output_canvas2" width="640" height="480"></canvas>
+    
+        <div class="landmark-grid-container" style="display: none;"></div>
+    
+        <!-- Face-API label overlay (text only, no bounding boxes) -->
+        <!-- <div id="labelOnVideo"
+             style="
+               position: absolute;
+               top: 0;
+               left: 0;
+               width: 640px;
+               height: auto;
+               color: yellow;
+               font-weight: bold;
+               text-align: center;
+               background: rgba(0,0,0,0.3);
+               z-index: 10;
+               pointer-events: none;
+             "
+        >
+        </div> -->
       </div>
-      <script type="text/javascript">
-         const slider = document.getElementById("slider");
-         const text1 = document.querySelector(".text1");
-         const text2 = document.querySelector(".text2");
-         const light_model = document.querySelector(".light_model");
-         const heavy_model = document.querySelector(".heavy_model");
-         slider.addEventListener("change", () => {
-           // console.log("Checkbox state:", slider.checked);
-           if (slider.checked) {
-             text1.style.color = "#000";
-             text2.style.color = "#2196F3";
-             light_model.style.color = "#2196F3";
-             heavy_model.style.color = "#000";
-           } else {
-             text1.style.color = "#2196F3";
-             text2.style.color = "#000";
-             light_model.style.color = "#000";
-             heavy_model.style.color = "#2196F3";
-           }
-         });
-      </script>
-      <br><br>
-      <!-- mediapipe -->
-      <div class="container" style="">
-         <video class="input_video" style="display: none;"></video>
-         <canvas class="output_canvas" width="640px" height="480px"></canvas>
-         <video class="input_video" style="display: none; padding-left: 100px;"></video>
-         <canvas class="output_canvas2" width="640px" height="480px"></canvas>
-         <div class="landmark-grid-container" style="display: none;"></div>
-      </div>
-      <h2 id="time" style="text-align: center;"></h2>
-      <!-- <div id="yourDiv" style="text-align: center;">
-         <h1>
-             <span id="result">?</span>
-         </h1>
-         </div> -->
-      <div class="container"></div>
-      <iframe src="/daily_activity" style="width: 100%;"></iframe> -->
-      <script type="module">
-         let landmarks = [];
-         
-         
-         
-         
-         const videoElement = document.getElementsByClassName('input_video')[0];
-         const canvasElement = document.getElementsByClassName('output_canvas')[0];
-         const canvasCtx = canvasElement.getContext('2d');
-         
-         function onResults(results) {
-         
-         
-         
-           canvasCtx.save();
-           canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-           // shows real video
-           canvasCtx.drawImage(
-               results.image, 0, 0, canvasElement.width, canvasElement.height);
-           
-           if (results.multiFaceLandmarks) {
-             for (const landmarks of results.multiFaceLandmarks) {
-               drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION,
-                              {color: '#C0C0C070', lineWidth: 1});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {color: '#FF3030'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, {color: '#FF3030'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_IRIS, {color: '#FF3030'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, {color: '#30FF30'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, {color: '#30FF30'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_IRIS, {color: '#30FF30'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, {color: '#E0E0E0'});
-               drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, {color: '#E0E0E0'});
-             }
-           }
-           canvasCtx.restore();
-         
-         }
-         
-         const faceMesh = new FaceMesh({locateFile: (file) => {
-           return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-         }});
-         faceMesh.setOptions({
-           maxNumFaces: 1,
-           refineLandmarks: true,
-           minDetectionConfidence: 0.5,
-           minTrackingConfidence: 0.5
-         });
-         faceMesh.onResults(onResults);
-         
-         
-         
-         
-         const canvasElement2 = document.getElementsByClassName('output_canvas2')[0];
-         const canvasCtx2 = canvasElement2.getContext('2d');
-         const landmarkContainer = document.getElementsByClassName('landmark-grid-container')[0];
-         const grid = new LandmarkGrid(landmarkContainer);
-         
-         
-         
-         function onResults2(results) {
-           landmarks = [];
-           let newLandmarks = [results.poseLandmarks];
-           landmarks.push(newLandmarks);
-         
-           if (!results.poseLandmarks) {
-             grid.updateLandmarks([]);
-             return;
-           }
-           // console.log(results.poseLandmarks)
-         
-           canvasCtx2.save();
-           canvasCtx2.clearRect(0, 0, canvasElement2.width, canvasElement2.height);
-           // canvasCtx2.drawImage(results.segmentationMask, 0, 0,
-           //                     canvasElement2.width, canvasElement2.height);
-         
-           // Only overwrite existing pixels.
-           canvasCtx2.globalCompositeOperation = 'source-in';
-           canvasCtx2.fillStyle = '#00FF00';
-           canvasCtx2.fillRect(0, 0, canvasElement2.width, canvasElement2.height);
-         
-           // Only overwrite missing pixels.
-           canvasCtx2.globalCompositeOperation = 'destination-atop';
-           canvasCtx2.drawImage(
-               results.image, 0, 0, canvasElement2.width, canvasElement2.height);
-         
-           canvasCtx2.globalCompositeOperation = 'source-over';
-           drawConnectors(canvasCtx2, results.poseLandmarks, POSE_CONNECTIONS,
-                          {color: '#00FF00', lineWidth: 4});
-           drawLandmarks(canvasCtx2, results.poseLandmarks,
-                         {color: '#FF0000', lineWidth: 2});
-           canvasCtx2.restore();
-         
-           grid.updateLandmarks(results.poseWorldLandmarks);
-         }
-         
-         const pose = new Pose({locateFile: (file) => {
-           return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
-         }});
-         pose.setOptions({
-           modelComplexity: 1,
-           smoothLandmarks: true,
-           enableSegmentation: true,
-           smoothSegmentation: true,
-           minDetectionConfidence: 0.5,
-           minTrackingConfidence: 0.5
-         });
-         pose.onResults(onResults2);
-         
-         
-         
-         
-         const slider = document.getElementById("slider");
-         
-           const video = document.createElement('video');
-           const canvas = document.createElement('canvas');
-           const context = canvas.getContext('2d');
-         
-         function onResults0(results) {
-           canvas.width = 640;
-           canvas.height = 480;
-         
-                     // Draw the current video frame onto the canvas
-                     context.drawImage(results.image, 0, 0, 640, 480);
-         
-                     // Convert the canvas image to base64 format
-                     const imageData = canvas.toDataURL('image/jpeg');
-         
-           
-           const slider_state = slider.checked
-           fetch('/process_image2', {
-             method: 'POST',
-             body: JSON.stringify({landmarks: landmarks, image: imageData, slider_state: slider_state}),
-             headers: {
-               'Content-Type': 'application/json'
-             }
-           }).then(response => response.json())
-           .then(data => {
-             // Handle the response data
-           })
-           .catch(error => {
-             console.error(error);
-           });
-         
-         
-           if (!results.poseLandmarks) {
-             grid.updateLandmarks([]);
-             return;
+      <h1 id="labelOnVideo" class="text3">Hello</h1>
+    
+      <script>
+        // GLOBAL STATE
+        let modelsLoaded = false;
+        let faceMatcher = null;
+        let videoStream = null;
+    
+        // DOM ELEMENTS
+        const statusEl       = document.getElementById('status');
+        const videoEl        = document.getElementsByClassName('input_video')[0];
+        const labelOnVideoEl = document.getElementById('labelOnVideo');
+    
+        // ON PAGE LOAD - Main Flow
+        document.addEventListener('DOMContentLoaded', async () => {
+          // 1. Load Models
+          statusEl.textContent = 'Loading face-api models...';
+          try {
+            await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+            await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+            await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
+            modelsLoaded = true;
+            statusEl.textContent = 'Models loaded. Starting video...';
+          } catch (err) {
+            statusEl.textContent = 'Error loading models: ' + err;
+            console.error(err);
+            return;
+          }
+    
+          // 2. Start Video
+          try {
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            videoEl.srcObject = videoStream;
+            videoEl.onloadedmetadata = () => {
+              videoEl.play();
+              statusEl.textContent = 'Video stream started. Creating matcher...';
+              console.log('[DEBUG] Video started');
+              createMatcherAndStartRecognition();
+            };
+          } catch (err) {
+            console.error(err);
+            statusEl.textContent = 'Error accessing webcam: ' + err;
+          }
+        });
+    
+        // CREATE MATCHER + START RECOGNITION
+        async function createMatcherAndStartRecognition() {
+          // Retrieve stored descriptors from localStorage
+          const stored = localStorage.getItem('faceDescriptors');
+          if (!stored) {
+            statusEl.textContent = 'No descriptors found in localStorage! Please train first.';
+            console.log('[DEBUG] No descriptors in localStorage');
+            return;
+          }
+    
+          // Parse and rebuild LabeledFaceDescriptors
+          const parsed = JSON.parse(stored); 
+          const labeledDescriptors = [];
+          for (const label in parsed) {
+            const descriptorArray = parsed[label]; // e.g. [ [0.1, 0.2], ... ]
+            const float32s = descriptorArray.map(arr => new Float32Array(arr));
+            labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(label, float32s));
+          }
+    
+          faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+          statusEl.textContent = 'Matcher created. Starting recognition loop...';
+          console.log('[DEBUG] FaceMatcher created with threshold=0.6');
+    
+          // 3. Start Recognition Loop
+          recognitionLoop();
+        }
+    
+        // RECOGNITION LOOP
+        async function recognitionLoop() {
+          // Continuously run face detection + recognition
+          requestAnimationFrame(recognitionLoop);
+    
+          if (!faceMatcher) return; // If something went wrong
+    
+          try {
+            const detections = await faceapi.detectAllFaces(
+              videoEl,
+              new faceapi.TinyFaceDetectorOptions()
+            ).withFaceLandmarks().withFaceDescriptors();
+    
+            if (!detections.length) {
+              labelOnVideoEl.textContent = 'No face detected';
+            } else {
+              // For simplicity, match only the first face
+              const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
+              labelOnVideoEl.textContent = `Detected: ${bestMatch.toString()}`;
             }
-           }
-         
-         const camera = new Camera(videoElement, {
-           onFrame: async () => {
-             await faceMesh.send({image: videoElement});
-             await pose.send({image: videoElement});
-             await onResults0({image: videoElement});
-         
-           },
-           width: 640,
-           height: 480
-         });
-         camera.start();
+          } catch (err) {
+            console.error('Recognition error:', err);
+          }
+        }
       </script>
-   </body>
-</html>
+            <script type="module">
+              let landmarks = [];
+              
+              
+              
+              
+              const videoElement = document.getElementsByClassName('input_video')[0];
+              const canvasElement = document.getElementsByClassName('output_canvas')[0];
+              const canvasCtx = canvasElement.getContext('2d');
+              
+              function onResults(results) {
+              
+              
+              
+                canvasCtx.save();
+                canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+                // shows real video
+                canvasCtx.drawImage(
+                    results.image, 0, 0, canvasElement.width, canvasElement.height);
+                
+                if (results.multiFaceLandmarks) {
+                  for (const landmarks of results.multiFaceLandmarks) {
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_TESSELATION,
+                                   {color: '#C0C0C070', lineWidth: 1});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYE, {color: '#FF3030'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_EYEBROW, {color: '#FF3030'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_RIGHT_IRIS, {color: '#FF3030'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYE, {color: '#30FF30'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_EYEBROW, {color: '#30FF30'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LEFT_IRIS, {color: '#30FF30'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_FACE_OVAL, {color: '#E0E0E0'});
+                    drawConnectors(canvasCtx, landmarks, FACEMESH_LIPS, {color: '#E0E0E0'});
+                  }
+                }
+                canvasCtx.restore();
+              
+              }
+              
+              const faceMesh = new FaceMesh({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+              }});
+              faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+              });
+              faceMesh.onResults(onResults);
+              
+              
+              
+              
+              const canvasElement2 = document.getElementsByClassName('output_canvas2')[0];
+              const canvasCtx2 = canvasElement2.getContext('2d');
+              const landmarkContainer = document.getElementsByClassName('landmark-grid-container')[0];
+              const grid = new LandmarkGrid(landmarkContainer);
+              
+              
+              
+              function onResults2(results) {
+                landmarks = [];
+                let newLandmarks = [results.poseLandmarks];
+                landmarks.push(newLandmarks);
+              
+                if (!results.poseLandmarks) {
+                  grid.updateLandmarks([]);
+                  return;
+                }
+                // console.log(results.poseLandmarks)
+              
+                canvasCtx2.save();
+                canvasCtx2.clearRect(0, 0, canvasElement2.width, canvasElement2.height);
+                // canvasCtx2.drawImage(results.segmentationMask, 0, 0,
+                //                     canvasElement2.width, canvasElement2.height);
+              
+                // Only overwrite existing pixels.
+                canvasCtx2.globalCompositeOperation = 'source-in';
+                canvasCtx2.fillStyle = '#00FF00';
+                canvasCtx2.fillRect(0, 0, canvasElement2.width, canvasElement2.height);
+              
+                // Only overwrite missing pixels.
+                canvasCtx2.globalCompositeOperation = 'destination-atop';
+                canvasCtx2.drawImage(
+                    results.image, 0, 0, canvasElement2.width, canvasElement2.height);
+              
+                canvasCtx2.globalCompositeOperation = 'source-over';
+                drawConnectors(canvasCtx2, results.poseLandmarks, POSE_CONNECTIONS,
+                               {color: '#00FF00', lineWidth: 4});
+                drawLandmarks(canvasCtx2, results.poseLandmarks,
+                              {color: '#FF0000', lineWidth: 2});
+                canvasCtx2.restore();
+              
+                grid.updateLandmarks(results.poseWorldLandmarks);
+              }
+              
+              const pose = new Pose({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+              }});
+              pose.setOptions({
+                modelComplexity: 1,
+                smoothLandmarks: true,
+                enableSegmentation: true,
+                smoothSegmentation: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+              });
+              pose.onResults(onResults2);
+              
+              
+              
+              
+              const slider = document.getElementById("slider");
+              
+                const video = document.createElement('video');
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+              
+              function onResults0(results) {
+                canvas.width = 640;
+                canvas.height = 480;
+              
+                          // Draw the current video frame onto the canvas
+                          context.drawImage(results.image, 0, 0, 640, 480);
+              
+                          // Convert the canvas image to base64 format
+                          const imageData = canvas.toDataURL('image/jpeg');
+              
+                 // use to share embedings to cloud server (code was in full version)           
+                // const slider_state = slider.checked
+                // fetch('/process_image2', {
+                //   method: 'POST',
+                //   body: JSON.stringify({landmarks: landmarks, image: imageData, slider_state: slider_state}),
+                //   headers: {
+                //     'Content-Type': 'application/json'
+                //   }
+                // }).then(response => response.json())
+                // .then(data => {
+                //   // Handle the response data
+                // })
+                // .catch(error => {
+                //   console.error(error);
+                // });
+              
+              
+                if (!results.poseLandmarks) {
+                  grid.updateLandmarks([]);
+                  return;
+                 }
+                }
+              
+              const camera = new Camera(videoElement, {
+                onFrame: async () => {
+                  await faceMesh.send({image: videoElement});
+                  await pose.send({image: videoElement});
+                  await onResults0({image: videoElement});
+              
+                },
+                width: 640,
+                height: 480
+              });
+              camera.start();
+           </script>
+     
+    </body>
+    </html>

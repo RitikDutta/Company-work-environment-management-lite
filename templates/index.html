@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>Company Work Environment Management System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            color: #333333;
+            font-size: 32px;
+            margin-bottom: 24px;
+            text-align: center;
+            margin: 24px;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 24px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: none;
+            color: #ffffff;
+            background-color: #007bff;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        .about-container {
+            margin-top: 48px;
+            max-width: 600px;
+            text-align: center;
+            color: #666666;
+        }
+
+        footer {
+          position: fixed;
+          bottom: 0;
+          right: 0;
+          padding: 10px;
+          text-align: center;
+          font-family: Arial, sans-serif;
+          font-size: 14px;
+          color: grey;
+        }
+
+        footer p {
+          margin: 0;
+        }
+        footer a{
+        /*  opacity: 60%;*/
+          text-decoration: none;
+          color: grey;
+          transition: 0.3s ease-in-out;
+          padding-left: 5px;
+          padding-right: 5px;
+
+        }
+        footer a:hover {
+          opacity: 0.8;
+          color: black;
+
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Company Work Environment Management System <span style="color: red;">Lite</span></h1>
+
+    <div class="button-container">
+        <a class="button" href="/app.html">Get Started</a>
+        <a class="button" href="/train">Train Your Face</a>
+    </div>
+
+    <div class="about-container">
+        <p>About the Project:</p>
+        <p>Company Work Environment Management System is an innovative solution designed to track and analyze employee activities in the workplace. Leveraging advanced facial recognition technology and activity classification algorithms, the system provides valuable insights into employee productivity while ensuring privacy and compliance with relevant regulations.</p>
+    </div>
+
+    <footer>
+      <p>Designed and developed by Ritik Dutta</p>
+      <div class="social-icons">
+        <a href="https://github.com/ritikdutta" target="_blank" class='fa' style="font-size: 24px;">
+          &#xf09b;
+        </a>
+        <a href="https://www.linkedin.com/in/ritik-dutta-6037a6173/" target="_blank" class='fa' style="font-size: 24px;">
+          &#xf0e1;
+        </a>
+        <a href="mailto:ritikduttagd@gmail.com?subject=Hello%20There&amp;body=I%20would%20like%20to%20get%20in%20touch%20with%20you" target="_blank" class='fa' style="font-size: 24px;">
+          &#xf1a0;
+        </a>
+      </div>
+    </footer>
+
+    <script>
+        document.getElementById("get-started").addEventListener("click", function () {
+            // Handle "Get Started" button click event
+            // Add your custom logic here
+        });
+
+        document.getElementById("train-your-face").addEventListener("click", function () {
+            // Handle "Train Your Face" button click event
+            // Add your custom logic here
+        });
+    </script>
+</body>
+
+</html>

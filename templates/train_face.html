@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Collect Face Images for Training</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Automatically load face-api.js from CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+  <!-- Fonts & Basic Styles -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;1,300&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      width: 600px;
+      margin: 0 auto;
+      padding-top: 50px;
+      text-align: center;
+      position: relative;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    form {
+      background-color: #fff;
+      border-radius: 5px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+      margin-bottom: 20px;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    input[type="submit"],
+    button {
+      display: block;
+      margin: 0 auto 20px auto;
+      border-radius: 5px;
+      padding: 10px;
+      border: none;
+      width: 100%;
+      max-width: 500px;
+      box-sizing: border-box;
+      font-size: 16px;
+      color: #555;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      background-color: #fff;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    input[type="submit"] {
+      background-color: #4CAF50;
+      color: #fff;
+      font-weight: bold;
+      box-shadow: none;
+      transition: background-color 0.2s ease;
+    }
+
+    input[type="submit"]:hover {
+      background-color: #3e8e41;
+    }
+
+    p {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 0;
+    }
+
+    /* Status message on top of container */
+    #status {
+      margin-bottom: 15px;
+      color: green;
+      font-weight: bold;
+    }
+
+    /* Webcam area (hidden until user starts the webcam) */
+    #webcamContainer {
+      width: 640px;
+      height: 480px;
+      border: 1px solid #ccc;
+      margin: 20px auto;
+      position: relative;
+      display: none; /* hidden by default */
+    }
+    #videoElement {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 640px;
+      height: 480px;
+      background: #000;
+    }
+
+    .notice {
+      position: fixed;
+      text-align: center;
+    }
+    .notice b {
+      color: lightcoral;
+    }
+    .reset_button {
+      text-decoration: none;
+      background-color: #ff3333;
+      color: #fff;
+      padding: 10px;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 5px;
+      display: block;
+      box-shadow: none;
+      margin-bottom: 20px;
+    }
+    .reset_button:hover {
+      background-color: #cc0000;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Collect Face Images for Training</h1>
+
+    <!-- Status at the top of container -->
+    <div id="status">Loading face-api models...</div>
+
+    <!-- 
+      Form area: 
+        - "Start Webcam", "Register Face" 
+        - File input, Name text input 
+        - "Submit" 
+        - "Reset Model" 
+    -->
+    <form id="myForm">
+      <!-- (Optional) Reset Model Button: Clears localStorage + memory -->
+      <button id="resetBtn" type="button" class="reset_button">Reset Model</button>
+
+      <!-- Start Webcam Button -->
+      <button id="startVideoBtn" type="button">Start Webcam</button>
+
+      <!-- Register Face from Webcam -->
+      <button id="registerWebcamBtn" type="button">Register Face (Webcam)</button>
+
+      <!-- File Input for uploading face images -->
+      <label for="imageInput">Select Face Image(s):</label>
+      <input type="file" id="imageInput" name="images" multiple accept="image/*">
+
+      <!-- Person's Name -->
+      <label for="textInput">Enter Person's Name:</label>
+      <input type="text" id="textInput" name="personName">
+
+      <!-- Submit button => processes images + saves descriptors -->
+      <input type="submit" value="Submit & Save Descriptors">
+    </form>
+
+    <!-- Webcam container (initially hidden) -->
+    <div id="webcamContainer">
+      <video id="videoElement" autoplay muted playsinline></video>
+    </div>
+
+    <p>Tip: Take a picture of the person facing the camera, with good lighting and no obstructions to the face.</p>
+  </div>
+
+  <div class="notice" style="width: 80%; left: 10%; bottom: 3%;">
+    <p style="padding-right: 10%; padding-left: 10%; text-align: center;">
+      We take your data privacy and security very seriously. Please note that 
+      <b>the image you submit</b> will not be saved in our databases. Instead, 
+      only the mathematical representation of your facial data will be kept for 
+      model training purposes. This data cannot be used to recreate the original 
+      face and is not shared with anyone. We are committed to ensuring the 
+      confidentiality and security of your data at all times.
+    </p>
+  </div>
+
+  <script>
+    // GLOBALS
+    let modelsLoaded = false;
+    let videoStream = null;
+
+    // descriptorsByLabel example:
+    //   { 'Alice': [Float32Array, ...], 'Bob': [...], ... }
+    let descriptorsByLabel = {};
+
+    // DOM 
+    const statusEl          = document.getElementById('status');
+    const myForm            = document.getElementById('myForm');
+    const resetBtn          = document.getElementById('resetBtn');
+    const startVideoBtn     = document.getElementById('startVideoBtn');
+    const registerWebcamBtn = document.getElementById('registerWebcamBtn');
+    const imageInputEl      = document.getElementById('imageInput');
+    const textInputEl       = document.getElementById('textInput');
+    const videoEl           = document.getElementById('videoElement');
+    const webcamContainerEl = document.getElementById('webcamContainer');
+
+    // ON PAGE LOAD => Load Models + Existing Descriptors
+    window.addEventListener('DOMContentLoaded', async () => {
+      statusEl.textContent = 'Loading face-api models...';
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+        await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
+        modelsLoaded = true;
+        statusEl.textContent = 'Models loaded! Checking existing localStorage...';
+        console.log('[DEBUG] face-api models loaded');
+      } catch (err) {
+        statusEl.textContent = 'Error loading models: ' + err;
+        console.error(err);
+        return;
+      }
+
+      // Load existing faceDescriptors if present
+      const stored = localStorage.getItem('faceDescriptors');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored); // { "Alice": [ [0.1, 0.2,...], ...], ... }
+          // Rebuild into descriptorsByLabel
+          for (const label in parsed) {
+            const arrOfArr = parsed[label]; 
+            const float32s = arrOfArr.map(val => new Float32Array(val));
+            // Append to local descriptorsByLabel
+            descriptorsByLabel[label] = (descriptorsByLabel[label] || []).concat(float32s);
+          }
+          statusEl.textContent = 'Models loaded. Found existing descriptors in localStorage.';
+          console.log('[DEBUG] loaded existing descriptors:', descriptorsByLabel);
+        } catch (parseErr) {
+          statusEl.textContent = 'Models loaded. Error parsing localStorage descriptors.';
+          console.error('[DEBUG] parse error localStorage:', parseErr);
+        }
+      } else {
+        statusEl.textContent = 'Models loaded. No existing descriptors found. Ready to train.';
+      }
+    });
+
+    // RESET MODEL: Clears localStorage + memory
+    resetBtn.addEventListener('click', () => {
+      localStorage.removeItem('faceDescriptors');
+      descriptorsByLabel = {};
+      statusEl.textContent = 'All local embeddings cleared!';
+      console.log('[DEBUG] localStorage removed, descriptorsByLabel reset.');
+    });
+
+    // START WEBCAM
+    startVideoBtn.addEventListener('click', async () => {
+      if (!modelsLoaded) {
+        statusEl.textContent = 'Please wait for models to load first!';
+        return;
+      }
+      if (videoStream) {
+        statusEl.textContent = 'Webcam is already running.';
+        return;
+      }
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoEl.srcObject = videoStream;
+        videoEl.onloadedmetadata = () => {
+          videoEl.play();
+          statusEl.textContent = 'Webcam started. Position your face, then "Register Face (Webcam)".';
+          console.log('[DEBUG] Webcam stream started');
+          webcamContainerEl.style.display = 'block';
+        };
+      } catch (err) {
+        statusEl.textContent = 'Error accessing webcam: ' + err;
+        console.error(err);
+      }
+    });
+
+// webcam
+    registerWebcamBtn.addEventListener('click', async () => {
+      if (!videoStream) {
+        alert('Please start the webcam first!');
+        return;
+      }
+      if (!modelsLoaded) {
+        alert('Models not loaded yet, please wait.');
+        return;
+      }
+
+      let personName = textInputEl.value.trim();
+      if (!personName) {
+        // If no name in the text field, prompt user
+        personName = prompt('Enter person name for the webcam face:');
+        if (!personName) {
+          alert('Registration cancelled. Provide a name next time.');
+          return;
+        }
+      }
+
+      statusEl.textContent = `Registering face for "${personName}" from webcam...`;
+
+      // Detect a single face from the video feed
+      const detection = await faceapi.detectSingleFace(
+        videoEl,
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks().withFaceDescriptor();
+
+      if (!detection) {
+        statusEl.textContent = 'No face detected. Try again.';
+        console.log('[DEBUG] No face from webcam');
+        return;
+      }
+
+      // Append
+      if (!descriptorsByLabel[personName]) {
+        descriptorsByLabel[personName] = [];
+      }
+      descriptorsByLabel[personName].push(detection.descriptor);
+
+      statusEl.textContent = `Webcam face registered for "${personName}". 
+        Total samples: ${descriptorsByLabel[personName].length}`;
+      console.log(`[DEBUG] Registered descriptor for ${personName}`, detection.descriptor);
+    });
+
+
+    myForm.addEventListener('submit', async (e) => {
+      e.preventDefault(); // prevent normal form submission
+
+      if (!modelsLoaded) {
+        alert('Please wait for models to load first!');
+        return;
+      }
+
+      const files = imageInputEl.files;
+      const personName = textInputEl.value.trim();
+
+      // If user selected images
+      if (files && files.length > 0) {
+        // If no name, prompt user
+        let labelUsed = personName;
+        if (!labelUsed) {
+          labelUsed = prompt('Enter person name for uploaded images:');
+          if (!labelUsed) {
+            alert('Operation cancelled. Provide a name next time.');
+            return;
+          }
+        }
+
+        statusEl.textContent = `Processing ${files.length} images for "${labelUsed}"...`;
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          try {
+            const image = await fileToImage(file);
+            const detection = await faceapi.detectSingleFace(
+              image,
+              new faceapi.TinyFaceDetectorOptions()
+            ).withFaceLandmarks().withFaceDescriptor();
+
+            if (!detection) {
+              console.log(`[DEBUG] No face in file: ${file.name}`);
+            } else {
+              if (!descriptorsByLabel[labelUsed]) {
+                descriptorsByLabel[labelUsed] = [];
+              }
+              descriptorsByLabel[labelUsed].push(detection.descriptor);
+
+              console.log(`[DEBUG] face found in ${file.name} => label: ${labelUsed}. 
+                total: ${descriptorsByLabel[labelUsed].length}`);
+            }
+          } catch (err) {
+            console.error(`[ERROR] Could not process file ${file.name}`, err);
+          }
+        }
+      }
+
+      // Now Save All descriptors to localStorage
+      if (Object.keys(descriptorsByLabel).length === 0) {
+        statusEl.textContent = 'No descriptors to save yet.';
+        return;
+      }
+      // Convert Float32Array => plain arrays
+      const plainObject = {};
+      for (const label in descriptorsByLabel) {
+        const arrOfFloat32 = descriptorsByLabel[label];
+        const arrOfPlain = arrOfFloat32.map(f32 => Array.from(f32));
+        // Merge if duplicates => not necessary; we simply store everything
+        plainObject[label] = arrOfPlain;
+      }
+
+      localStorage.setItem('faceDescriptors', JSON.stringify(plainObject));
+      statusEl.textContent = 'All descriptors saved to localStorage! Ready for recognition.';
+      console.log('[DEBUG] appended + saved descriptors:', plainObject);
+
+      // Reset form
+      myForm.reset();
+    });
+
+    // Helper => file => HTMLImageElement
+    async function fileToImage(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = err => reject(err);
+          img.src = e.target.result;
+        };
+        reader.onerror = err => reject(err);
+        reader.readAsDataURL(file);
+      });
+    }
+  </script>
+</body>
+</html>
