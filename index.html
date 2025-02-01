@@ -2,237 +2,318 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Face Registration & Recognition (Debug Version)</title>
-
-  <!-- Load face-api.js (browser build) from a specific CDN version -->
+  <title>face-api.js Example (Inspired by the Blog Post)</title>
+  <!-- Load face-api.js from a CDN -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
   <style>
     body {
       font-family: Arial, sans-serif;
-      text-align: center;
       margin: 20px;
+      text-align: center;
     }
-    video {
-      position: relative;
-      z-index: 1;
+    #inputImage, #overlay, #videoPreview {
+      border: 1px solid #ccc;
+      max-width: 640px;
+      max-height: 480px;
+      margin-top: 10px;
     }
     #overlay {
       position: absolute;
-      top: 20px;      /* match your video’s top offset */
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 999;   /* higher than the video */
-      pointer-events: none; /* so clicks pass through */
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .container {
+      position: relative;
+      display: inline-block;
     }
     #controls {
-      margin-bottom: 10px;
+      margin-bottom: 1rem;
     }
     #status {
-      margin-top: 10px;
+      margin-top: 0.5rem;
+      color: #009900;
       font-weight: bold;
-      color: green;
     }
   </style>
 </head>
 <body>
-  <h1>Face Registration & Recognition (Debug Version)</h1>
+  <h1>Face Recognition in the Browser</h1>
+  <p>Inspired by the face-api.js blog post</p>
 
   <div id="controls">
-    <label>
-      Enter Name:
-      <input type="text" id="nameInput" placeholder="e.g. Alice" />
-    </label>
-    <button id="registerBtn">Register Face</button>
+    <button id="loadModelsBtn">Load Models</button>
+    <button id="detectImageBtn">Detect in Image</button>
+    <button id="startVideoBtn">Start Video</button>
+    <button id="registerFaceBtn">Register Face</button>
     <button id="createMatcherBtn">Create Matcher</button>
-    <button id="startRecBtn">Start Recognition</button>
+    <button id="recognizeBtn">Recognize (Video)</button>
   </div>
 
-  <div id="status">Loading face-api.js models, please wait...</div>
-  
-  <!-- Webcam Video -->
-  <video id="video" width="640" height="480" autoplay muted></video>
-  <!-- Canvas Overlay for Drawing Boxes/Labels -->
-  <canvas id="overlay" width="640" height="480"></canvas>
+  <div>
+    <input type="file" id="imageUpload" accept="image/*" />
+    <input type="text" id="labelInput" placeholder="Enter label" />
+  </div>
+
+  <div id="status">Status messages go here...</div>
+
+  <!-- Container for image + overlay -->
+  <div class="container">
+    <img id="inputImage" src="" alt="Selected Image" />
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <!-- Container for video preview -->
+  <div class="container">
+    <video id="videoPreview" autoplay muted playsinline width="640" height="480"></video>
+    <canvas id="videoOverlay" width="640" height="480"></canvas>
+  </div>
 
   <script>
-    // -------------------------------------------------
-    // GLOBALS / STATE
-    // -------------------------------------------------
-    let descriptorsByLabel = {};  // { label: [Float32Array, Float32Array, ...], ... }
-    let faceMatcher = null;
+    // -------------------------------------------------------
+    // Global Variables
+    // -------------------------------------------------------
+    let faceMatcher = null;                  // Will hold FaceMatcher
+    let labeledDescriptors = [];             // Array of face-api.LabeledFaceDescriptors
+    let modelsLoaded = false;
     let videoStream = null;
-    let recognitionActive = false; // we'll use this to toggle the detection loop
 
-    // -------------------------------------------------
-    // 1. LOAD MODELS & START WEBCAM
-    // -------------------------------------------------
-    window.addEventListener('DOMContentLoaded', async () => {
-      console.log("[DEBUG] DOMContentLoaded - Start loading models...");
-      const statusEl = document.getElementById('status');
+    // We'll store all face descriptors here for any new label
+    // { 'Alice': [descriptor1, descriptor2, ...], 'Bob': [...] }
+    let descriptorsByLabel = {};
 
-      // Load the face-api.js models
+    // -------------------------------------------------------
+    // DOM Elements
+    // -------------------------------------------------------
+    const statusEl       = document.getElementById('status');
+    const loadModelsBtn  = document.getElementById('loadModelsBtn');
+    const detectImageBtn = document.getElementById('detectImageBtn');
+    const startVideoBtn  = document.getElementById('startVideoBtn');
+    const registerFaceBtn= document.getElementById('registerFaceBtn');
+    const createMatcherBtn = document.getElementById('createMatcherBtn');
+    const recognizeBtn   = document.getElementById('recognizeBtn');
+
+    const imageUploadEl  = document.getElementById('imageUpload');
+    const inputImageEl   = document.getElementById('inputImage');
+    const overlayEl      = document.getElementById('overlay');
+    const videoPreviewEl = document.getElementById('videoPreview');
+    const videoOverlayEl = document.getElementById('videoOverlay');
+    const labelInputEl   = document.getElementById('labelInput');
+
+    // -------------------------------------------------------
+    // 1. Load Models
+    // -------------------------------------------------------
+    loadModelsBtn.addEventListener('click', async () => {
+      statusEl.textContent = 'Loading models...';
       try {
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri('./models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('./models'),
-          faceapi.nets.faceRecognitionNet.loadFromUri('./models')
-        ]);
-        statusEl.textContent = 'Models loaded! Initializing webcam...';
-        console.log("[DEBUG] Models loaded successfully.");
+        await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
+        await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
+        await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
+        // If you'd like to use SSD MobileNet instead of Tiny Face Detector:
+        // await faceapi.nets.ssdMobilenetv1.loadFromUri('./models');
+
+        modelsLoaded = true;
+        statusEl.textContent = 'Models loaded successfully!';
       } catch (err) {
         statusEl.textContent = 'Error loading models: ' + err;
-        console.error("[DEBUG] Model loading error:", err);
+        console.error(err);
+      }
+    });
+
+    // -------------------------------------------------------
+    // 2. Detect in an Uploaded Image
+    // -------------------------------------------------------
+    imageUploadEl.addEventListener('change', () => {
+      // Display selected image in <img> tag
+      const file = imageUploadEl.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        inputImageEl.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    detectImageBtn.addEventListener('click', async () => {
+      if (!modelsLoaded) {
+        statusEl.textContent = 'Please load models first!';
+        return;
+      }
+      if (!inputImageEl.src) {
+        alert('Please select an image first!');
         return;
       }
 
-      // Access user webcam
+      // Wait for the image to load
+      await inputImageEl.decode();
+      statusEl.textContent = 'Detecting faces in image...';
+
+      // Prepare overlay
+      const canvas = overlayEl;
+      const displaySize = { width: inputImageEl.width, height: inputImageEl.height };
+      canvas.width = displaySize.width;
+      canvas.height = displaySize.height;
+
+      // Detect faces with descriptors
+      const detections = await faceapi.detectAllFaces(inputImageEl, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks()
+        .withFaceDescriptors();
+
+      // Optionally resize results if your displayed image is smaller/bigger
+      // const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      // But if the image is actual size, resizing not needed
+
+      // Clear canvas + Draw
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      detections.forEach(detection => {
+        // Draw bounding box
+        const box = detection.detection.box;
+        ctx.strokeStyle = '#00FF00';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(box.x, box.y, box.width, box.height);
+
+        // Draw landmarks
+        faceapi.draw.drawFaceLandmarks(canvas, [detection]);
+      });
+
+      statusEl.textContent = `Detected ${detections.length} face(s) in the image.`;
+      console.log('Detections:', detections);
+    });
+
+    // -------------------------------------------------------
+    // 3. Start Video
+    // -------------------------------------------------------
+    startVideoBtn.addEventListener('click', async () => {
+      if (!modelsLoaded) {
+        statusEl.textContent = 'Please load models first!';
+        return;
+      }
+      if (videoStream) {
+        statusEl.textContent = 'Video already started!';
+        return;
+      }
+
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const video = document.getElementById('video');
-        video.srcObject = videoStream;
-        video.onloadedmetadata = () => {
-          video.play();
-          statusEl.textContent = 'Webcam initialized. Ready to register faces.';
-          console.log("[DEBUG] Webcam initialized.");
+        videoPreviewEl.srcObject = videoStream;
+        videoPreviewEl.onloadedmetadata = () => {
+          videoPreviewEl.play();
         };
+        statusEl.textContent = 'Video stream started.';
       } catch (err) {
+        console.error(err);
         statusEl.textContent = 'Error accessing webcam: ' + err;
-        console.error("[DEBUG] Webcam error:", err);
       }
     });
 
-    // -------------------------------------------------
-    // 2. REGISTER A FACE (Capture a Descriptor)
-    // -------------------------------------------------
-    document.getElementById('registerBtn').addEventListener('click', async () => {
-      console.log("[DEBUG] 'Register Face' clicked.");
-      const name = document.getElementById('nameInput').value.trim();
-      const statusEl = document.getElementById('status');
-
-      if (!name) {
-        alert('Please enter a name before registering.');
+    // -------------------------------------------------------
+    // 4. Register a Face from Video
+    // -------------------------------------------------------
+    // Similar to blog logic: we capture a face from the video + store descriptor with label
+    registerFaceBtn.addEventListener('click', async () => {
+      if (!videoStream) {
+        alert('Start video first!');
         return;
       }
-      const video = document.getElementById('video');
+      const label = labelInputEl.value.trim();
+      if (!label) {
+        alert('Please enter a label (e.g. "Alice") before registering.');
+        return;
+      }
 
-      // Detect a single face in the current video frame
-      const detection = await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+      statusEl.textContent = 'Registering face for label: ' + label + '...';
+
+      // Detect a single face in current video frame
+      const detection = await faceapi.detectSingleFace(
+        videoPreviewEl,
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks().withFaceDescriptor();
 
       if (!detection) {
-        statusEl.textContent = 'No face detected. Please position your face clearly.';
-        console.log("[DEBUG] No face detected for registration.");
+        statusEl.textContent = 'No face detected. Try again.';
         return;
       }
 
-      // We have a 128-d embedding vector for the face
-      const descriptor = detection.descriptor; // Float32Array(128)
-
-      // Store descriptor under this label
-      if (!descriptorsByLabel[name]) {
-        descriptorsByLabel[name] = [];
+      // Store descriptor in our dictionary
+      if (!descriptorsByLabel[label]) {
+        descriptorsByLabel[label] = [];
       }
-      descriptorsByLabel[name].push(descriptor);
+      descriptorsByLabel[label].push(detection.descriptor);
 
-      statusEl.textContent = `Face registered for "${name}". Samples for ${name}: ${descriptorsByLabel[name].length}`;
-      console.log(`[DEBUG] Registered face for ${name}. Now have ${descriptorsByLabel[name].length} samples.`);
+      statusEl.textContent = `Registered face for "${label}". Total samples: ${descriptorsByLabel[label].length}`;
+      console.log(`Registered descriptor for ${label}`, detection.descriptor);
     });
 
-    // -------------------------------------------------
-    // 3. CREATE FACE MATCHER
-    // -------------------------------------------------
-    document.getElementById('createMatcherBtn').addEventListener('click', () => {
-      console.log("[DEBUG] 'Create Matcher' clicked.");
-      const statusEl = document.getElementById('status');
-      const labeledFaceDescriptors = [];
-
-      // Convert descriptorsByLabel to LabeledFaceDescriptors
+    // -------------------------------------------------------
+    // 5. Create FaceMatcher
+    // -------------------------------------------------------
+    createMatcherBtn.addEventListener('click', () => {
+      if (Object.keys(descriptorsByLabel).length === 0) {
+        statusEl.textContent = 'No registered faces to create matcher.';
+        return;
+      }
+      labeledDescriptors = [];
       for (const label in descriptorsByLabel) {
-        labeledFaceDescriptors.push(
+        labeledDescriptors.push(
           new faceapi.LabeledFaceDescriptors(label, descriptorsByLabel[label])
         );
-        console.log(`[DEBUG] Label: ${label}, # of descriptors: ${descriptorsByLabel[label].length}`);
       }
-
-      // Initialize a FaceMatcher with threshold=0.6 (tweak if needed)
-      faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
-      statusEl.textContent = 'Face Matcher created! You can now start recognition.';
-      console.log("[DEBUG] FaceMatcher created with threshold=0.6:", faceMatcher);
+      // Create FaceMatcher with threshold (0.6 typical)
+      faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+      statusEl.textContent = 'FaceMatcher created with threshold=0.6!';
+      console.log('Created FaceMatcher:', faceMatcher);
     });
 
-    // -------------------------------------------------
-    // 4. START RECOGNITION (REAL-TIME LOOP)
-    // -------------------------------------------------
-    document.getElementById('startRecBtn').addEventListener('click', () => {
-      console.log("[DEBUG] 'Start Recognition' clicked.");
-      const statusEl = document.getElementById('status');
-
+    // -------------------------------------------------------
+    // 6. Recognize in Real-Time (Video)
+    // -------------------------------------------------------
+    recognizeBtn.addEventListener('click', () => {
       if (!faceMatcher) {
-        alert('No matcher found! Please create the matcher first.');
+        statusEl.textContent = 'Create matcher first!';
         return;
       }
-
-      if (recognitionActive) {
-        console.log("[DEBUG] Recognition already active. Doing nothing.");
-        return;
-      }
-
-      // We set a flag so we don't stack multiple loops
-      recognitionActive = true;
-      statusEl.textContent = 'Recognition started. Looking for registered faces...';
-
-      // Kick off the detection loop
-      recognizeFaces();
+      statusEl.textContent = 'Recognition started...';
+      recognizeVideoLoop();
     });
 
-    // The main detection loop using requestAnimationFrame
-    async function recognizeFaces() {
-      // If user stops or no longer wants recognition, we can do:
-      // if (!recognitionActive) return;
-
-      console.log("[DEBUG] recognizeFaces() called.");
-
-      // Schedule next iteration
-      requestAnimationFrame(recognizeFaces);
-
-      const video = document.getElementById('video');
-      const canvas = document.getElementById('overlay');
+    async function recognizeVideoLoop() {
+      const canvas = videoOverlayEl;
       const ctx = canvas.getContext('2d');
+      const w = videoPreviewEl.videoWidth;
+      const h = videoPreviewEl.videoHeight;
+      canvas.width = w;
+      canvas.height = h;
 
-      // Match the canvas to the video size
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Clear previous drawings
+      ctx.clearRect(0, 0, w, h);
 
-      // Detect all faces in current video frame
+      // Detect faces
       const detections = await faceapi.detectAllFaces(
-        video,
+        videoPreviewEl,
         new faceapi.TinyFaceDetectorOptions()
       ).withFaceLandmarks().withFaceDescriptors();
 
-      console.log("[DEBUG] # of detections this frame:", detections.length);
-
-      // Clear previous drawings
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // For each detected face, find best match
-      detections.forEach(detection => {
-        const box = detection.detection.box;
-        const bestMatch = faceMatcher.findBestMatch(detection.descriptor);
-        console.log("[DEBUG] Best match:", bestMatch.toString());
+      // For each face, find best match
+      detections.forEach(d => {
+        const box = d.detection.box;
+        const bestMatch = faceMatcher.findBestMatch(d.descriptor);
 
         // Draw bounding box
         ctx.strokeStyle = '#00FF00';
         ctx.lineWidth = 2;
         ctx.strokeRect(box.x, box.y, box.width, box.height);
 
-        // Draw label (bestMatch.toString() includes distance)
+        // Draw label
         ctx.fillStyle = '#00FF00';
         ctx.font = '16px Arial';
         ctx.fillText(bestMatch.toString(), box.x, box.y - 5);
       });
+
+      requestAnimationFrame(recognizeVideoLoop);
     }
   </script>
 </body>
