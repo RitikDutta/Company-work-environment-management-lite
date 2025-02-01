@@ -223,55 +223,47 @@
     });
 
 async function recognizeLoop() {
+  // Run on each animation frame
   requestAnimationFrame(recognizeLoop);
 
-  const video = videoEl;
-  const videoWidth = video.videoWidth;
-  const videoHeight = video.videoHeight;
-
-  if (videoWidth === 0 || videoHeight === 0) return;
-
-  // Get the displayed size of the video element
-  const displaySize = {
-    width: video.clientWidth,
-    height: video.clientHeight
+  // Ensure the canvas matches the video dimensions
+  const displaySize = { 
+    width: videoEl.videoWidth, 
+    height: videoEl.videoHeight 
   };
-
-  // Set canvas buffer size to match displayed size
   overlayEl.width = displaySize.width;
   overlayEl.height = displaySize.height;
+  
+  // Clear previous drawings
+  overlayCtx.clearRect(0, 0, displaySize.width, displaySize.height);
 
-  // Match dimensions for face-api.js
-  faceapi.matchDimensions(overlayEl, displaySize);
+  // Get detections from the video
+  const detections = await faceapi
+    .detectAllFaces(videoEl, new faceapi.TinyFaceDetectorOptions())
+    .withFaceLandmarks()
+    .withFaceDescriptors();
 
-  // Detect faces
-  const detections = await faceapi.detectAllFaces(
-    video,
-    new faceapi.TinyFaceDetectorOptions()
-  ).withFaceLandmarks().withFaceDescriptors();
+  if (!detections.length) return;
 
-  // Resize detections to the displayed size
+  // Resize detection results to match the display size
   const resizedDetections = faceapi.resizeResults(detections, displaySize);
 
-  // Clear overlay
-  overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height);
-
-  // For each detection, find best match and draw
   resizedDetections.forEach(d => {
     const box = d.detection.box;
     const bestMatch = faceMatcher.findBestMatch(d.descriptor);
 
-    // Draw bounding box
+    // Draw the bounding box
     overlayCtx.strokeStyle = '#00FF00';
     overlayCtx.lineWidth = 2;
     overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
 
-    // Draw label text
+    // Draw the label above the bounding box
     overlayCtx.fillStyle = '#00FF00';
     overlayCtx.font = '16px Arial';
     overlayCtx.fillText(bestMatch.toString(), box.x, box.y - 5);
   });
 }
+
   </script>
 </body>
 </html>
