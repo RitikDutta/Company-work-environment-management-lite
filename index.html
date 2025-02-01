@@ -222,48 +222,45 @@
       recognizeLoop();
     });
 
-async function recognizeLoop() {
-  // Run on each animation frame
-  requestAnimationFrame(recognizeLoop);
+    async function recognizeLoop() {
+      // Use requestAnimationFrame for continuous detection
+      requestAnimationFrame(recognizeLoop);
 
-  // Ensure the canvas matches the video dimensions
-  const displaySize = { 
-    width: videoEl.videoWidth, 
-    height: videoEl.videoHeight 
-  };
-  overlayEl.width = displaySize.width;
-  overlayEl.height = displaySize.height;
-  
-  // Clear previous drawings
-  overlayCtx.clearRect(0, 0, displaySize.width, displaySize.height);
+      // Match the canvas size to the video
+      const w = videoEl.videoWidth;
+      const h = videoEl.videoHeight;
+      overlayEl.width = w;
+      overlayEl.height = h;
 
-  // Get detections from the video
-  const detections = await faceapi
-    .detectAllFaces(videoEl, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptors();
+      // Clear overlay
+      overlayCtx.clearRect(0, 0, w, h);
 
-  if (!detections.length) return;
+      // Detect faces
+      const detections = await faceapi.detectAllFaces(
+        videoEl,
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks().withFaceDescriptors();
 
-  // Resize detection results to match the display size
-  const resizedDetections = faceapi.resizeResults(detections, displaySize);
+      // If no detections, skip drawing
+      if (!detections.length) return;
 
-  resizedDetections.forEach(d => {
-    const box = d.detection.box;
-    const bestMatch = faceMatcher.findBestMatch(d.descriptor);
+      // For each detection, find best match
+      detections.forEach(d => {
+        const box = d.detection.box;
+        const bestMatch = faceMatcher.findBestMatch(d.descriptor);
+        console.log(`[DEBUG] bestMatch: ${bestMatch.toString()}`); // e.g. "Alice (distance: 0.53)"
 
-    // Draw the bounding box
-    overlayCtx.strokeStyle = '#00FF00';
-    overlayCtx.lineWidth = 2;
-    overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
+        // Draw bounding box
+        overlayCtx.strokeStyle = '#00FF00';
+        overlayCtx.lineWidth = 2;
+        overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
 
-    // Draw the label above the bounding box
-    overlayCtx.fillStyle = '#00FF00';
-    overlayCtx.font = '16px Arial';
-    overlayCtx.fillText(bestMatch.toString(), box.x, box.y - 5);
-  });
-}
-
+        // Draw label text
+        overlayCtx.fillStyle = '#00FF00';
+        overlayCtx.font = '16px Arial';
+        overlayCtx.fillText(bestMatch.toString(), box.x, box.y - 5);
+      });
+    }
   </script>
 </body>
 </html>
