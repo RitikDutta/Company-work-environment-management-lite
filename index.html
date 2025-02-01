@@ -13,12 +13,17 @@
       text-align: center;
       margin: 20px;
     }
-    #video, #overlay {
+    video {
       position: relative;
-      width: 640px;
-      height: 480px;
-      border: 1px solid #ccc;
-      margin-top: 10px;
+      z-index: 1;
+    }
+    #overlay {
+      position: absolute;
+      top: 20px;      /* match your video’s top offset */
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;   /* higher than the video */
+      pointer-events: none; /* so clicks pass through */
     }
     #controls {
       margin-bottom: 10px;
@@ -46,9 +51,9 @@
   <div id="status">Loading face-api.js models, please wait...</div>
   
   <!-- Webcam Video -->
-  <video id="video" autoplay muted></video>
+  <video id="video" width="640" height="480" autoplay muted></video>
   <!-- Canvas Overlay for Drawing Boxes/Labels -->
-  <canvas id="overlay"></canvas>
+  <canvas id="overlay" width="640" height="480"></canvas>
 
   <script>
     // -------------------------------------------------
