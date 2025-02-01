@@ -2,318 +2,264 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>face-api.js Example (Inspired by the Blog Post)</title>
-  <!-- Load face-api.js from a CDN -->
+  <title>Face Recognition - Draw on Web</title>
+  <!-- Load face-api.js (browser build) from CDN -->
   <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 20px;
       text-align: center;
+      margin: 20px;
     }
-    #inputImage, #overlay, #videoPreview {
-      border: 1px solid #ccc;
-      max-width: 640px;
-      max-height: 480px;
-      margin-top: 10px;
-    }
-    #overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
-      z-index: 999;
+    #status {
+      margin-top: 0.5rem;
+      font-weight: bold;
+      color: green;
     }
     .container {
       position: relative;
       display: inline-block;
+      width: 640px;
+      height: 480px;
+      border: 1px solid #ccc;
+    }
+    /* Video placed at bottom (z-index: 0) */
+    #videoElement {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 640px;
+      height: 480px;
+      z-index: 0;
+      background: #000;
+    }
+    /* Canvas overlay placed on top (z-index: 1) */
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 640px;
+      height: 480px;
+      pointer-events: none; /* allow clicks to pass through */
+      z-index: 1;
     }
     #controls {
       margin-bottom: 1rem;
     }
-    #status {
-      margin-top: 0.5rem;
-      color: #009900;
-      font-weight: bold;
+    #labelInput {
+      width: 120px;
     }
   </style>
 </head>
 <body>
-  <h1>Face Recognition in the Browser</h1>
-  <p>Inspired by the face-api.js blog post</p>
-
+  <h1>Face Recognition (Drawing on the Web)</h1>
   <div id="controls">
     <button id="loadModelsBtn">Load Models</button>
-    <button id="detectImageBtn">Detect in Image</button>
     <button id="startVideoBtn">Start Video</button>
-    <button id="registerFaceBtn">Register Face</button>
+    <input type="text" id="labelInput" placeholder="Label (e.g. Alice)" />
+    <button id="registerBtn">Register Face</button>
     <button id="createMatcherBtn">Create Matcher</button>
-    <button id="recognizeBtn">Recognize (Video)</button>
+    <button id="startRecBtn">Start Recognition</button>
   </div>
 
-  <div>
-    <input type="file" id="imageUpload" accept="image/*" />
-    <input type="text" id="labelInput" placeholder="Enter label" />
-  </div>
+  <div id="status">Status messages...</div>
 
-  <div id="status">Status messages go here...</div>
-
-  <!-- Container for image + overlay -->
+  <!-- Video and overlay container -->
   <div class="container">
-    <img id="inputImage" src="" alt="Selected Image" />
+    <video id="videoElement" autoplay muted playsinline></video>
     <canvas id="overlay"></canvas>
   </div>
 
-  <!-- Container for video preview -->
-  <div class="container">
-    <video id="videoPreview" autoplay muted playsinline width="640" height="480"></video>
-    <canvas id="videoOverlay" width="640" height="480"></canvas>
-  </div>
-
   <script>
-    // -------------------------------------------------------
-    // Global Variables
-    // -------------------------------------------------------
-    let faceMatcher = null;                  // Will hold FaceMatcher
-    let labeledDescriptors = [];             // Array of face-api.LabeledFaceDescriptors
+    // -----------------------------------------------------
+    // Global State
+    // -----------------------------------------------------
     let modelsLoaded = false;
     let videoStream = null;
+    let faceMatcher = null;
 
-    // We'll store all face descriptors here for any new label
-    // { 'Alice': [descriptor1, descriptor2, ...], 'Bob': [...] }
+    // Example:
+    // descriptorsByLabel = {
+    //   'Alice': [Float32Array(128), Float32Array(128), ...],
+    //   'Bob':   [Float32Array(128), ...]
+    // }
     let descriptorsByLabel = {};
 
-    // -------------------------------------------------------
+    // -----------------------------------------------------
     // DOM Elements
-    // -------------------------------------------------------
+    // -----------------------------------------------------
     const statusEl       = document.getElementById('status');
     const loadModelsBtn  = document.getElementById('loadModelsBtn');
-    const detectImageBtn = document.getElementById('detectImageBtn');
     const startVideoBtn  = document.getElementById('startVideoBtn');
-    const registerFaceBtn= document.getElementById('registerFaceBtn');
+    const registerBtn    = document.getElementById('registerBtn');
     const createMatcherBtn = document.getElementById('createMatcherBtn');
-    const recognizeBtn   = document.getElementById('recognizeBtn');
-
-    const imageUploadEl  = document.getElementById('imageUpload');
-    const inputImageEl   = document.getElementById('inputImage');
-    const overlayEl      = document.getElementById('overlay');
-    const videoPreviewEl = document.getElementById('videoPreview');
-    const videoOverlayEl = document.getElementById('videoOverlay');
+    const startRecBtn    = document.getElementById('startRecBtn');
     const labelInputEl   = document.getElementById('labelInput');
 
-    // -------------------------------------------------------
+    const videoEl   = document.getElementById('videoElement');
+    const overlayEl = document.getElementById('overlay');
+    const overlayCtx = overlayEl.getContext('2d');
+
+    // -----------------------------------------------------
     // 1. Load Models
-    // -------------------------------------------------------
+    // -----------------------------------------------------
     loadModelsBtn.addEventListener('click', async () => {
       statusEl.textContent = 'Loading models...';
       try {
         await faceapi.nets.tinyFaceDetector.loadFromUri('./models');
         await faceapi.nets.faceLandmark68Net.loadFromUri('./models');
         await faceapi.nets.faceRecognitionNet.loadFromUri('./models');
-        // If you'd like to use SSD MobileNet instead of Tiny Face Detector:
-        // await faceapi.nets.ssdMobilenetv1.loadFromUri('./models');
-
+        // Optionally: faceapi.nets.ssdMobilenetv1.loadFromUri('./models');
         modelsLoaded = true;
         statusEl.textContent = 'Models loaded successfully!';
+        console.log('[DEBUG] Models loaded.');
       } catch (err) {
         statusEl.textContent = 'Error loading models: ' + err;
         console.error(err);
       }
     });
 
-    // -------------------------------------------------------
-    // 2. Detect in an Uploaded Image
-    // -------------------------------------------------------
-    imageUploadEl.addEventListener('change', () => {
-      // Display selected image in <img> tag
-      const file = imageUploadEl.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        inputImageEl.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    detectImageBtn.addEventListener('click', async () => {
-      if (!modelsLoaded) {
-        statusEl.textContent = 'Please load models first!';
-        return;
-      }
-      if (!inputImageEl.src) {
-        alert('Please select an image first!');
-        return;
-      }
-
-      // Wait for the image to load
-      await inputImageEl.decode();
-      statusEl.textContent = 'Detecting faces in image...';
-
-      // Prepare overlay
-      const canvas = overlayEl;
-      const displaySize = { width: inputImageEl.width, height: inputImageEl.height };
-      canvas.width = displaySize.width;
-      canvas.height = displaySize.height;
-
-      // Detect faces with descriptors
-      const detections = await faceapi.detectAllFaces(inputImageEl, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks()
-        .withFaceDescriptors();
-
-      // Optionally resize results if your displayed image is smaller/bigger
-      // const resizedDetections = faceapi.resizeResults(detections, displaySize);
-      // But if the image is actual size, resizing not needed
-
-      // Clear canvas + Draw
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      detections.forEach(detection => {
-        // Draw bounding box
-        const box = detection.detection.box;
-        ctx.strokeStyle = '#00FF00';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-        // Draw landmarks
-        faceapi.draw.drawFaceLandmarks(canvas, [detection]);
-      });
-
-      statusEl.textContent = `Detected ${detections.length} face(s) in the image.`;
-      console.log('Detections:', detections);
-    });
-
-    // -------------------------------------------------------
-    // 3. Start Video
-    // -------------------------------------------------------
+    // -----------------------------------------------------
+    // 2. Start Video Stream
+    // -----------------------------------------------------
     startVideoBtn.addEventListener('click', async () => {
       if (!modelsLoaded) {
         statusEl.textContent = 'Please load models first!';
         return;
       }
       if (videoStream) {
-        statusEl.textContent = 'Video already started!';
+        statusEl.textContent = 'Video already running.';
         return;
       }
-
       try {
         videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        videoPreviewEl.srcObject = videoStream;
-        videoPreviewEl.onloadedmetadata = () => {
-          videoPreviewEl.play();
+        videoEl.srcObject = videoStream;
+        videoEl.onloadedmetadata = () => {
+          videoEl.play();
+          statusEl.textContent = 'Video stream started.';
+          console.log('[DEBUG] Video started.');
         };
-        statusEl.textContent = 'Video stream started.';
       } catch (err) {
         console.error(err);
         statusEl.textContent = 'Error accessing webcam: ' + err;
       }
     });
 
-    // -------------------------------------------------------
-    // 4. Register a Face from Video
-    // -------------------------------------------------------
-    // Similar to blog logic: we capture a face from the video + store descriptor with label
-    registerFaceBtn.addEventListener('click', async () => {
+    // -----------------------------------------------------
+    // 3. Register Face
+    // -----------------------------------------------------
+    registerBtn.addEventListener('click', async () => {
       if (!videoStream) {
-        alert('Start video first!');
+        alert('Please start video first!');
         return;
       }
       const label = labelInputEl.value.trim();
       if (!label) {
-        alert('Please enter a label (e.g. "Alice") before registering.');
+        alert('Please enter a label before registering.');
         return;
       }
 
-      statusEl.textContent = 'Registering face for label: ' + label + '...';
+      statusEl.textContent = `Registering face for label: ${label}...`;
 
-      // Detect a single face in current video frame
+      // Detect a single face from the current video frame
       const detection = await faceapi.detectSingleFace(
-        videoPreviewEl,
+        videoEl,
         new faceapi.TinyFaceDetectorOptions()
       ).withFaceLandmarks().withFaceDescriptor();
 
       if (!detection) {
         statusEl.textContent = 'No face detected. Try again.';
+        console.log('[DEBUG] No face detected for registration.');
         return;
       }
 
-      // Store descriptor in our dictionary
+      // Save descriptor in descriptorsByLabel
       if (!descriptorsByLabel[label]) {
         descriptorsByLabel[label] = [];
       }
       descriptorsByLabel[label].push(detection.descriptor);
 
-      statusEl.textContent = `Registered face for "${label}". Total samples: ${descriptorsByLabel[label].length}`;
-      console.log(`Registered descriptor for ${label}`, detection.descriptor);
+      statusEl.textContent = `Registered face for "${label}". ` +
+        `Samples: ${descriptorsByLabel[label].length}`;
+      console.log(`[DEBUG] Registered descriptor for ${label}`);
     });
 
-    // -------------------------------------------------------
-    // 5. Create FaceMatcher
-    // -------------------------------------------------------
+    // -----------------------------------------------------
+    // 4. Create FaceMatcher
+    // -----------------------------------------------------
     createMatcherBtn.addEventListener('click', () => {
-      if (Object.keys(descriptorsByLabel).length === 0) {
-        statusEl.textContent = 'No registered faces to create matcher.';
+      const labels = Object.keys(descriptorsByLabel);
+      if (labels.length === 0) {
+        statusEl.textContent = 'No faces registered. Please register some faces first.';
         return;
       }
-      labeledDescriptors = [];
-      for (const label in descriptorsByLabel) {
-        labeledDescriptors.push(
-          new faceapi.LabeledFaceDescriptors(label, descriptorsByLabel[label])
+      // Build an array of LabeledFaceDescriptors
+      const labeledFaceDescriptors = [];
+      for (const label of labels) {
+        labeledFaceDescriptors.push(
+          new faceapi.LabeledFaceDescriptors(
+            label,
+            descriptorsByLabel[label] // array of Float32Array
+          )
         );
       }
-      // Create FaceMatcher with threshold (0.6 typical)
-      faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.2);
-      statusEl.textContent = 'FaceMatcher created with threshold=0.6!';
-      console.log('Created FaceMatcher:', faceMatcher);
+      // FaceMatcher with default threshold=0.6
+      faceMatcher = new faceapi.FaceMatcher(labeledFaceDescriptors, 0.6);
+      statusEl.textContent = 'FaceMatcher created with threshold=0.6.';
+      console.log('[DEBUG] FaceMatcher created:', faceMatcher);
     });
 
-    // -------------------------------------------------------
-    // 6. Recognize in Real-Time (Video)
-    // -------------------------------------------------------
-    recognizeBtn.addEventListener('click', () => {
+    // -----------------------------------------------------
+    // 5. Start Real-Time Recognition
+    // -----------------------------------------------------
+    startRecBtn.addEventListener('click', () => {
       if (!faceMatcher) {
-        statusEl.textContent = 'Create matcher first!';
+        statusEl.textContent = 'Please create matcher first!';
         return;
       }
-      statusEl.textContent = 'Recognition started...';
-      recognizeVideoLoop();
+      statusEl.textContent = 'Recognition started. Check bounding boxes on video...';
+      console.log('[DEBUG] Starting recognition loop.');
+      recognizeLoop();
     });
 
-    async function recognizeVideoLoop() {
-      const canvas = videoOverlayEl;
-      const ctx = canvas.getContext('2d');
-      const w = videoPreviewEl.videoWidth;
-      const h = videoPreviewEl.videoHeight;
-      canvas.width = w;
-      canvas.height = h;
+    async function recognizeLoop() {
+      // Use requestAnimationFrame for continuous detection
+      requestAnimationFrame(recognizeLoop);
 
-      // Clear previous drawings
-      ctx.clearRect(0, 0, w, h);
+      // Match the canvas size to the video
+      const w = videoEl.videoWidth;
+      const h = videoEl.videoHeight;
+      overlayEl.width = w;
+      overlayEl.height = h;
+
+      // Clear overlay
+      overlayCtx.clearRect(0, 0, w, h);
 
       // Detect faces
       const detections = await faceapi.detectAllFaces(
-        videoPreviewEl,
+        videoEl,
         new faceapi.TinyFaceDetectorOptions()
       ).withFaceLandmarks().withFaceDescriptors();
 
-      // For each face, find best match
+      // If no detections, skip drawing
+      if (!detections.length) return;
+
+      // For each detection, find best match
       detections.forEach(d => {
         const box = d.detection.box;
         const bestMatch = faceMatcher.findBestMatch(d.descriptor);
+        console.log(`[DEBUG] bestMatch: ${bestMatch.toString()}`); // e.g. "Alice (distance: 0.53)"
 
         // Draw bounding box
-        ctx.strokeStyle = '#00FF00';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
+        overlayCtx.strokeStyle = '#00FF00';
+        overlayCtx.lineWidth = 2;
+        overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
 
-        // Draw label
-        ctx.fillStyle = '#00FF00';
-        ctx.font = '16px Arial';
-        ctx.fillText(bestMatch.toString(), box.x, box.y - 5);
+        // Draw label text
+        overlayCtx.fillStyle = '#00FF00';
+        overlayCtx.font = '16px Arial';
+        overlayCtx.fillText(bestMatch.toString(), box.x, box.y - 5);
       });
-
-      requestAnimationFrame(recognizeVideoLoop);
     }
   </script>
 </body>
