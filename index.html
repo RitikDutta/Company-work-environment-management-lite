@@ -263,7 +263,7 @@
         );
       }
       // Create FaceMatcher with threshold (0.6 typical)
-      faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.6);
+      faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.2);
       statusEl.textContent = 'FaceMatcher created with threshold=0.6!';
       console.log('Created FaceMatcher:', faceMatcher);
     });
