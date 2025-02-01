@@ -225,26 +225,54 @@
     // 6. Real-Time Recognition Loop
     // -----------------------------------------------------
     async function recognitionLoop() {
-      if (!faceMatcher) return; // Safety check
+      requestAnimationFrame(recognizeLoop);
 
-      try {
-        const detections = await faceapi.detectAllFaces(
-          videoEl,
-          new faceapi.TinyFaceDetectorOptions()
-        ).withFaceLandmarks().withFaceDescriptors();
+      const video = videoEl;
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
 
-        if (!detections.length) {
-          labelOnVideoEl.textContent = 'No face detected';
-        } else {
-          const bestMatch = faceMatcher.findBestMatch(detections[0].descriptor);
-          labelOnVideoEl.textContent = `Detected: ${bestMatch.toString()}`;
-        }
-      } catch (err) {
-        console.error('Detection error:', err);
-      }
+      if (videoWidth === 0 || videoHeight === 0) return;
 
-      // Continue the loop
-      requestAnimationFrame(recognitionLoop);
+      // Get the displayed size of the video element
+      const displaySize = {
+        width: video.clientWidth,
+        height: video.clientHeight
+      };
+
+      // Set canvas buffer size to match displayed size
+      overlayEl.width = displaySize.width;
+      overlayEl.height = displaySize.height;
+
+      // Match dimensions for face-api.js
+      faceapi.matchDimensions(overlayEl, displaySize);
+
+      // Detect faces
+      const detections = await faceapi.detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions()
+      ).withFaceLandmarks().withFaceDescriptors();
+
+      // Resize detections to the displayed size
+      const resizedDetections = faceapi.resizeResults(detections, displaySize);
+
+      // Clear overlay
+      overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height);
+
+      // For each detection, find best match and draw
+      resizedDetections.forEach(d => {
+        const box = d.detection.box;
+        const bestMatch = faceMatcher.findBestMatch(d.descriptor);
+
+        // Draw bounding box
+        overlayCtx.strokeStyle = '#00FF00';
+        overlayCtx.lineWidth = 2;
+        overlayCtx.strokeRect(box.x, box.y, box.width, box.height);
+
+        // Draw label text
+        overlayCtx.fillStyle = '#00FF00';
+        overlayCtx.font = '16px Arial';
+        overlayCtx.fillText(bestMatch.toString(), box.x, box.y - 5);
+      });
     }
   </script>
 </body>
