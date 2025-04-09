@@ -1,38 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CWEM System Documentation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <title>Company Work Environment Management System</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
+        :root {
+            --primary-color: #2a6fb8;
+            --secondary-color: #5a6a7a;
+            --background-color: #f2f2f2;
+            --card-bg-color: #ffffff;
+            --text-color: #333;
+            --heading-color: #1a2e44;
+            --light-text-color: #f8f9fa;
+            --accent-color: #1abc9c;
+            --border-color: #e1e4e8;
+            --box-shadow-soft: 0 3px 12px rgba(0, 0, 0, 0.07);
+            --box-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.1);
+            --border-radius: 6px;
+            --transition-speed: 0.4s;
+        }
+
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 16px;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.7;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Full Page Intro/Hero Section */
+        .intro-section {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            padding: 40px 20px; /* Reduced padding slightly */
+            text-align: center;
+            min-height: 100vh; /* Occupy full viewport height */
+            position: relative; /* Needed for absolute positioning of child */
+            background-color: #f2f2f2; /* Ensure background color is set */
+            overflow: hidden; /* Prevent potential overflow issues */
         }
 
-        h1 {
+        .intro-section h1 {
             color: #333333;
             font-size: 32px;
             margin-bottom: 24px;
             text-align: center;
-            margin: 24px;
+            /* margin-top: 24px; Removed fixed margin */
         }
 
-        .button-container {
+        .intro-section .button-container {
             display: flex;
             gap: 24px;
+            margin-bottom: 48px;
         }
 
-        .button {
+        .intro-section .button {
             display: inline-block;
             padding: 12px 24px;
             font-size: 16px;
@@ -45,87 +90,820 @@
             transition: background-color 0.3s ease;
         }
 
-        .button:hover {
+        .intro-section .button:hover {
             background-color: #0056b3;
         }
 
-        .about-container {
-            margin-top: 48px;
+        .intro-section .about-container {
             max-width: 600px;
             text-align: center;
             color: #666666;
+            font-size: 1rem;
+        }
+        .intro-section .about-container p:first-child {
+            font-weight: bold;
+            margin-bottom: 8px;
         }
 
+        /* Made with Love Footer for Hero */
+        .made-with-love {
+            position: absolute;
+            bottom: 20px;
+            right: 25px;
+            font-size: 14px;
+            color: #777; /* Slightly darker grey */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Nicer font */
+        }
+
+        .made-with-love .heart {
+            color: #e44d4d; /* Red heart */
+            display: inline-block;
+            animation: heartbeat 1.5s infinite ease-in-out;
+        }
+
+        .made-with-love a {
+            text-decoration: none;
+            color: inherit; /* Inherit color from parent */
+            font-weight: 600; /* Make name bold */
+        }
+
+        .made-with-love .animated-name {
+            display: inline-block; /* Needed for animation */
+            animation: subtle-glow 2s infinite alternate ease-in-out;
+             transition: transform 0.3s ease;
+        }
+        .made-with-love a:hover .animated-name{
+             transform: scale(1.05); /* Slight scale on hover */
+        }
+
+
+        /* Keyframes for Animations */
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            10%, 30% { transform: scale(0.9); }
+            20%, 40%, 60%, 80% { transform: scale(1.1); }
+            50%, 70% { transform: scale(1.05); }
+        }
+
+        @keyframes subtle-glow {
+            from {
+                text-shadow: 0 0 2px rgba(0, 123, 255, 0.3); /* Subtle blue glow start */
+                 color: #555;
+            }
+            to {
+                text-shadow: 0 0 5px rgba(0, 123, 255, 0.6); /* Subtle blue glow end */
+                 color: #333;
+            }
+        }
+
+
+        /* Documentation Section Styles */
+        section {
+            padding: 70px 0;
+        }
+
+        section h2 {
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        section h2::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background-color: #007bff;
+            margin: 12px auto 0;
+        }
+
+        .functionality-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 35px;
+            margin-top: 20px;
+        }
+
+        .func-item {
+            background-color: var(--card-bg-color);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow-soft);
+            transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+
+        .func-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--box-shadow-medium);
+        }
+
+        .func-item i {
+            font-size: 1.8rem;
+            color: #007bff;
+            margin-bottom: 15px;
+            display: block;
+            text-align: left;
+        }
+
+        .func-item h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 10px;
+        }
+
+        .func-item p {
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            line-height: 1.6;
+        }
+
+        .architecture-flow {
+            max-width: 800px;
+            margin: 40px auto 0;
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .architecture-flow::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 5px;
+            bottom: 5px;
+            width: 3px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .arch-step {
+            margin-bottom: 40px;
+            position: relative;
+            background-color: var(--card-bg-color);
+            padding: 20px 25px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow-soft);
+        }
+
+        .arch-step::before {
+            content: '';
+            position: absolute;
+            left: -44px;
+            top: 12px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background-color: #007bff;
+            border: 3px solid var(--background-color);
+            z-index: 1;
+        }
+
+        .arch-step-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 12px;
+        }
+
+        .arch-step-header i {
+            font-size: 1.6rem;
+            color: #007bff;
+            min-width: 25px;
+        }
+
+        .arch-step-header h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--heading-color);
+        }
+
+        .arch-step p {
+            font-size: 0.95rem;
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .arch-step-details {
+             font-size: 0.9rem;
+             margin-top: 8px;
+             color: #555;
+             background-color: #f8f9fa;
+             padding: 10px 15px;
+             border-radius: 4px;
+             border: 1px solid #eee;
+        }
+        .arch-step-details strong {
+            color: var(--heading-color);
+            font-weight: 600;
+        }
+        .arch-step-details ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            padding-top: 5px;
+        }
+         .arch-step-details li {
+            margin-bottom: 5px;
+         }
+
+        .sub-heading {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin: 60px 0 40px 0;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 20px;
+            text-align: center;
+        }
+
+        .tech-item {
+            background-color: var(--card-bg-color);
+            padding: 20px 15px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+         .tech-item:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--box-shadow-soft);
+         }
+
+        .tech-item i, .tech-item .fab, .tech-item .fas {
+            font-size: 2.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 12px;
+            transition: color var(--transition-speed) ease;
+        }
+         .tech-item:hover i, .tech-item:hover .fab, .tech-item:hover .fas {
+            color: #007bff;
+         }
+        .tech-item:hover .fa-python { color: #3776AB; }
+        .tech-item:hover .fa-js-square { color: #F7DF1E; }
+        .tech-item:hover .fa-aws { color: #FF9900; }
+        .tech-item:hover .fa-html5 { color: #E34F26;}
+        .tech-item:hover .fa-css3-alt { color: #1572B6;}
+
+
+        .tech-item h4 {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--heading-color);
+        }
+
+        .privacy-content {
+            max-width: 850px;
+            margin: 0 auto;
+            text-align: center;
+            background-color: #eef2f7;
+            padding: 40px 50px;
+            border-radius: var(--border-radius);
+            border: 1px solid #d6dde5;
+        }
+
+        .privacy-content i {
+            font-size: 3rem;
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+
+        .privacy-content h3 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 15px;
+        }
+
+        .privacy-content p {
+            font-size: 1.05rem;
+            color: var(--secondary-color);
+            line-height: 1.7;
+        }
+         .privacy-content strong {
+            color: var(--heading-color);
+            font-weight: 600;
+         }
+         .privacy-content ul {
+            list-style: disc;
+            margin-left: 30px;
+            text-align: left;
+            margin-top: 15px;
+         }
+         .privacy-content li {
+            margin-bottom: 8px;
+         }
+
+
+         .data-management-info {
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+             gap: 30px;
+             align-items: start;
+         }
+
+         .data-section {
+            background-color: var(--card-bg-color);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow-soft);
+         }
+
+         .data-section h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+         }
+         .data-section h3 i {
+            color: var(--accent-color);
+         }
+
+         .data-section ul {
+            list-style: none;
+            padding-left: 5px;
+            color: var(--secondary-color);
+         }
+         .data-section li {
+            margin-bottom: 10px;
+            position: relative;
+            padding-left: 20px;
+            font-size: 0.95rem;
+         }
+         .data-section li::before {
+            content: "\f0da";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            top: 1px;
+            color: var(--accent-color);
+            font-size: 0.85rem;
+         }
+
+        .data-section .db-purpose {
+            font-size: 0.95rem;
+            margin-top: 15px;
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: 1px solid #eee;
+        }
+        .db-purpose strong {
+             color: var(--heading-color);
+             font-weight: 600;
+        }
+
+        .deployment-options {
+             display: grid;
+             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+             gap: 30px;
+        }
+        .deployment-card {
+            background-color: var(--card-bg-color);
+            padding: 30px 25px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--box-shadow-soft);
+            text-align: center;
+            transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+        .deployment-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--box-shadow-medium);
+        }
+        .deployment-card i {
+            font-size: 2.5rem;
+            margin-bottom: 18px;
+        }
+        .deployment-card .fa-aws { color: #FF9900; }
+        .deployment-card .fa-cloud { color: #007bff; }
+        .deployment-card .fa-server { color: var(--secondary-color); }
+        .deployment-card .fa-building { color: var(--secondary-color); }
+
+
+        .deployment-card h4 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 10px;
+        }
+        .deployment-card p {
+            font-size: 0.9rem;
+            color: var(--secondary-color);
+        }
+
+        .enhancements-content {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto;
+             background-color: var(--card-bg-color);
+             padding: 30px 40px;
+             border-radius: var(--border-radius);
+             border: 1px solid var(--border-color);
+             box-shadow: var(--box-shadow-soft);
+        }
+        .enhancements-content i {
+            font-size: 2.8rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+        .enhancements-content h3 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: var(--heading-color);
+            margin-bottom: 15px;
+        }
+        .enhancements-content p {
+            color: var(--secondary-color);
+            font-size: 1rem;
+        }
+
+
         footer {
-          position: fixed;
-          bottom: 0;
-          right: 0;
-          padding: 10px;
+          padding: 30px 20px;
           text-align: center;
           font-family: Arial, sans-serif;
           font-size: 14px;
           color: grey;
+          margin-top: 60px;
+          border-top: 1px solid var(--border-color);
+          background-color: #e9ecef;
         }
 
         footer p {
-          margin: 0;
+          margin: 0 0 10px 0;
         }
         footer a{
-        /*  opacity: 60%;*/
           text-decoration: none;
           color: grey;
           transition: 0.3s ease-in-out;
-          padding-left: 5px;
-          padding-right: 5px;
-
+          padding-left: 8px;
+          padding-right: 8px;
         }
         footer a:hover {
           opacity: 0.8;
           color: black;
-
         }
+        footer .fa {
+            font-size: 24px !important;
+        }
+
+
+        @media (max-width: 992px) {
+            section h2 { font-size: 2rem; }
+            .container { padding: 0 15px; }
+        }
+
+        @media (max-width: 768px) {
+            html { font-size: 15px; }
+            .intro-section h1 { font-size: 28px; }
+            .functionality-grid { grid-template-columns: 1fr; }
+            .tech-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 15px;}
+            .architecture-flow { padding-left: 40px; }
+            .arch-step::before { left: -34px; width: 18px; height: 18px;}
+            .arch-step-header i { font-size: 1.4rem; }
+            .arch-step-header h3 { font-size: 1.15rem; }
+            .data-management-info { grid-template-columns: 1fr; }
+            .deployment-options { grid-template-columns: 1fr; }
+            .privacy-content { padding: 30px; }
+            .made-with-love { font-size: 12px; right: 15px; bottom: 15px;} /* Adjust for smaller screens */
+        }
+
+        @media (max-width: 576px) {
+            .intro-section { min-height: 100vh; padding: 30px 15px; } /* Ensure full height on small screens */
+            .intro-section h1 { font-size: 24px; }
+            .intro-section .button-container { flex-direction: column; gap: 15px; }
+            section { padding: 50px 0; }
+            section h2 { font-size: 1.8rem; margin-bottom: 40px; }
+            .architecture-flow { padding-left: 30px; }
+            .arch-step::before { left: -28px; width: 16px; height: 16px;}
+            .func-item, .arch-step, .data-section, .deployment-card { padding: 20px; }
+            .tech-grid { grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
+            .tech-item i { font-size: 2rem; }
+            .tech-item h4 { font-size: 0.9rem; }
+            .privacy-content ul { margin-left: 20px;}
+             .made-with-love { display: none; } /* Optionally hide on very small screens */
+        }
+
+        .fade-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .fade-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
     </style>
 </head>
-
 <body>
-    <h1>Company Work Environment Management System <span style="color: red;">Lite</span></h1>
 
-    <div class="button-container">
-        <a class="button" href="both.html">Get Started</a>
-        <a class="button" href="train_face.html">Train Your Face</a>
+    <div class="intro-section">
+        <h1>Company Work Environment Management System <span style="color: red;">Lite</span></h1>
+        <div class="button-container">
+            <a class="button" href="both.html">Get Started</a>
+            <a class="button" href="train_face.html">Train Your Face</a>
+        </div>
+        <div class="about-container">
+            <p>About the Project:</p>
+            <p>Company Work Environment Management System is an innovative solution designed to track and analyze employee activities in the workplace. Leveraging advanced facial recognition technology and activity classification algorithms, the system provides valuable insights into employee productivity while ensuring privacy and compliance with relevant regulations.</p>
+        </div>
+        <!-- Added "Made with Love" element -->
+        <div class="made-with-love">
+            Made with <span class="heart">❤️</span> by <a href="https://ritikdutta.com" target="_blank" rel="noopener noreferrer"><span class="animated-name">Ritik Dutta</span></a>
+        </div>
     </div>
 
-    <div class="about-container">
-        <p>About the Project:</p>
-        <p>Company Work Environment Management System is an innovative solution designed to track and analyze employee activities in the workplace. Leveraging advanced facial recognition technology and activity classification algorithms, the system provides valuable insights into employee productivity while ensuring privacy and compliance with relevant regulations.</p>
-    </div>
+    <main>
+        <section id="functionality" class="container">
+            <h2>Core Functionality</h2>
+            <div class="functionality-grid">
+                 <div class="func-item fade-up">
+                    <i class="fas fa-user-check"></i>
+                    <h3>Identity Verification</h3>
+                    <p>Utilizes facial embeddings (via MTCNN/Haar + FaceNet) compared against registered profiles (using SVM) to confirm user presence.</p>
+                </div>
+                <div class="func-item fade-up">
+                    <i class="fas fa-street-view"></i>
+                    <h3>Pose Landmark Tracking</h3>
+                    <p>Detects 33 3D body pose landmarks (X, Y, Z, visibility) in real-time using MediaPipe for activity analysis.</p>
+                </div>
+                <div class="func-item fade-up">
+                    <i class="fas fa-tasks"></i>
+                    <h3>Activity Classification</h3>
+                    <p>Classifies detected poses into predefined activities (e.g., working, on phone, looking away) using a trained model (XGBoost).</p>
+                </div>
+                <div class="func-item fade-up">
+                    <i class="fas fa-database"></i>
+                    <h3>Automated Record Management</h3>
+                    <p>Calculates activity durations and automatically updates daily and cumulative records in the database (Cassandra).</p>
+                </div>
+                 <div class="func-item fade-up">
+                    <i class="fas fa-globe"></i>
+                    <h3>Browser-Based Operation</h3>
+                    <p>Core processing (landmark/embedding extraction) and interaction occur within the user's web browser via JavaScript.</p>
+                </div>
+                <div class="func-item fade-up">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Privacy-Focused Transmission</h3>
+                    <p>Only transmits summarized, non-identifiable activity data (JSON format) to the backend server periodically.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="architecture" class="container">
+            <h2>System Architecture: Processing Flow</h2>
+            <div class="architecture-flow">
+                <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                        <i class="fas fa-camera-retro"></i>
+                        <h3>1. Frame Acquisition</h3>
+                    </div>
+                    <p>Video frames are captured from the user's webcam using the browser's `getUserMedia` API.</p>
+                    <div class="arch-step-details">Requires HTTPS connection for security and API access permission.</div>
+                </div>
+                 <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                        <i class="fas fa-draw-polygon"></i>
+                        <h3>2. Feature Extraction (Client-Side)</h3>
+                    </div>
+                    <p>Key visual features are extracted from each frame directly within the browser.</p>
+                     <div class="arch-step-details">
+                        <ul>
+                            <li><strong>Pose Landmarks:</strong> MediaPipe JS library calculates 33 3D pose landmarks.</li>
+                            <li><strong>Face Detection:</strong> MTCNN or Haar Cascade (via JS library/WASM) detects face bounding box.</li>
+                            <li><strong>Face Cropping:</strong> Face region is isolated from the frame.</li>
+                            <li><strong>Face Embedding:</strong> FaceNet model (via TensorFlow.js or similar) generates a 128-dimension vector representing facial features.</li>
+                        </ul>
+                     </div>
+                </div>
+                <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                        <i class="fas fa-cogs"></i>
+                        <h3>3. Prediction & Analysis</h3>
+                    </div>
+                    <p>Extracted features are used for recognition and classification, potentially involving backend communication.</p>
+                     <div class="arch-step-details">
+                        <ul>
+                            <li><strong>Face Recognition:</strong> Embedding sent to backend API; compared against database using trained SVM model to identify user.</li>
+                            <li><strong>Pose Classification:</strong> Pose landmarks sent to backend API; classified into predefined activities using trained XGBoost model.</li>
+                            <li>Backend likely implemented using Flask (Python). Communication via secure AJAX/WebSocket.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="arch-step fade-up">
+                     <div class="arch-step-header">
+                        <i class="fas fa-stopwatch"></i>
+                        <h3>4. Duration Calculation</h3>
+                    </div>
+                    <p>System tracks the time spent by the identified user in the classified pose/activity.</p>
+                     <div class="arch-step-details">Duration is calculated when the user or the activity changes, or periodically.</div>
+                </div>
+                <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                         <i class="fas fa-cloud-upload-alt"></i>
+                        <h3>5. Data Persistence</h3>
+                    </div>
+                    <p>Activity summary (User ID, Activity Type, Calculated Duration, Timestamp) is sent to the backend.</p>
+                    <div class="arch-step-details">
+                        <ul>
+                           <li>Backend logic connects to Cassandra database.</li>
+                           <li>Checks if user/date record exists; creates if new.</li>
+                           <li>Updates `Daily Activity` table with the duration for the specific activity/user/date.</li>
+                           <li>Updates `Total Activity` table, incrementing the cumulative duration for the activity/user.</li>
+                           <li>Only JSON summary data is stored, adhering to privacy protocols.</li>
+                        </ul>
+                     </div>
+                </div>
+            </div>
+
+             <h3 class="sub-heading">Training Workflow</h3>
+              <div class="architecture-flow">
+                <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                        <i class="fas fa-photo-video"></i>
+                        <h3>1. Data Collection (Offline)</h3>
+                    </div>
+                    <p>Collect and label video data representing different users and activities.</p>
+                     <div class="arch-step-details">
+                         <ul>
+                            <li>Extract pose landmarks (MediaPipe) and save with activity labels (e.g., 'working', 'on_phone').</li>
+                            <li>Detect/crop faces (MTCNN/Haar), generate embeddings (FaceNet), and save with user labels.</li>
+                            <li>Data typically stored in CSV format.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                        <i class="fas fa-graduation-cap"></i>
+                        <h3>2. Model Training</h3>
+                    </div>
+                    <p>Train separate ML models using the collected, labeled data.</p>
+                     <div class="arch-step-details">
+                        <ul>
+                            <li>**Face Recognition Model:** Train SVM (or other classifiers like KNN, ANN tested) on face embeddings and user labels. Linear SVM chosen for efficiency/performance balance.</li>
+                            <li>**Pose Classification Model:** Train XGBoost (or others like Random Forest, ANN tested) on pose landmarks and activity labels. XGBoost selected for accuracy and speed.</li>
+                            <li>Data split into training/validation/test sets for tuning and evaluation.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="arch-step fade-up">
+                    <div class="arch-step-header">
+                        <i class="fas fa-save"></i>
+                        <h3>3. Model Deployment</h3>
+                    </div>
+                    <p>Save the trained models (e.g., using `joblib` or framework-specific methods).</p>
+                    <div class="arch-step-details">Models are loaded by the backend (Flask API) to perform predictions on incoming data from the client-side application.</div>
+                </div>
+              </div>
+        </section>
+
+        <section id="tech-stack" class="container">
+            <h2>Technology Stack</h2>
+            <div class="tech-grid">
+                <div class="tech-item fade-up" title="Backend Language"><i class="fab fa-python"></i><h4>Python</h4></div>
+                <div class="tech-item fade-up" title="Web Framework"><i class="fas fa-flask"></i><h4>Flask</h4></div>
+                <div class="tech-item fade-up" title="Pose Estimation"><i class="fas fa-person-walking"></i><h4>MediaPipe</h4></div>
+                <div class="tech-item fade-up" title="Face Detection"><i class="fas fa-user-tag"></i><h4>MTCNN/Haar</h4></div>
+                <div class="tech-item fade-up" title="Face Embedding"><i class="fas fa-id-badge"></i><h4>FaceNet</h4></div>
+                <div class="tech-item fade-up" title="ML Library"><i class="fas fa-brain"></i><h4>Scikit-learn</h4></div>
+                <div class="tech-item fade-up" title="Classifier"><i class="fas fa-sitemap"></i><h4>SVM</h4></div>
+                <div class="tech-item fade-up" title="Classifier"><i class="fas fa-tree"></i><h4>XGBoost</h4></div>
+                <div class="tech-item fade-up" title="CV Library"><i class="fas fa-image"></i><h4>OpenCV</h4></div>
+                <div class="tech-item fade-up" title="Deep Learning (Optional)"><i class="fab fa-dochub"></i><h4>TensorFlow/Keras</h4></div>
+                <div class="tech-item fade-up" title="Client-side Scripting"><i class="fab fa-js-square"></i><h4>JavaScript</h4></div>
+                <div class="tech-item fade-up" title="Markup Language"><i class="fab fa-html5"></i><h4>HTML5</h4></div>
+                <div class="tech-item fade-up" title="Styling Language"><i class="fab fa-css3-alt"></i><h4>CSS3</h4></div>
+                <div class="tech-item fade-up" title="NoSQL Database"><i class="fas fa-database"></i><h4>Cassandra</h4></div>
+                <div class="tech-item fade-up" title="Cloud Platform"><i class="fab fa-aws"></i><h4>AWS</h4></div>
+                <div class="tech-item fade-up" title="Web Server/Proxy"><i class="fas fa-server"></i><h4>Nginx</h4></div>
+                <div class="tech-item fade-up" title="SSL Certificate"><i class="fas fa-lock"></i><h4>Let's Encrypt</h4></div>
+                <div class="tech-item fade-up" title="Version Control"><i class="fab fa-github"></i><h4>GitHub</h4></div>
+            </div>
+        </section>
+
+        <section id="privacy" class="container">
+            <h2>Data Privacy Approach</h2>
+            <div class="privacy-content fade-up">
+                <i class="fas fa-user-secret"></i>
+                <h3>Prioritizing Confidentiality</h3>
+                <p>The system is designed with data minimization and privacy as core principles. <strong>Raw image or video data is never stored or transmitted off the user's local machine.</strong> Processing occurs as follows:</p>
+                <ul>
+                    <li>Facial landmarks and embeddings are generated locally in the browser.</li>
+                    <li>These mathematical representations are sent to the backend for prediction (if needed).</li>
+                    <li>Only the final, aggregated results (e.g., `UserID: 123, Activity: Working, Duration: 300s, Timestamp: ...`) are securely transmitted (via HTTPS) and stored in the database as a JSON summary.</li>
+                    <li>This approach ensures compliance with privacy standards while enabling productivity analysis.</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="data" class="container">
+            <h2>Data Management Strategy</h2>
+            <div class="data-management-info">
+                 <div class="data-section fade-up">
+                    <h3><i class="fas fa-table"></i>Database Structure (Cassandra)</h3>
+                    <ul>
+                        <li>Connection established securely from the backend.</li>
+                        <li>Checks for existing user records based on `employee_name` and `date`.</li>
+                        <li>Adds new user/date combinations automatically.</li>
+                        <li>Primary Key strategy likely involves `employee_name` and `date` for partitioning and clustering to optimize queries for daily records.</li>
+                    </ul>
+                 </div>
+                 <div class="data-section fade-up">
+                    <h3><i class="fas fa-clipboard-list"></i>Key Data Tables</h3>
+                     <div class="db-purpose"><strong>Daily Activity Table:</strong> Stores the duration of each classified activity for a specific user on a specific date. Allows for daily reporting.</div>
+                     <div class="db-purpose"><strong>Total Activity Table:</strong> Aggregates the total duration spent by each user on each activity across all time. Useful for long-term performance analysis.</div>
+                 </div>
+            </div>
+        </section>
+
+        <section id="deployment" class="container">
+            <h2>Deployment Models</h2>
+             <div class="deployment-options">
+                <div class="deployment-card fade-up">
+                    <i class="fab fa-aws"></i>
+                    <h4>Cloud Deployment</h4>
+                    <p>Utilizes platforms like AWS EC2. Requires setup of a web server (Nginx as reverse proxy), application server (Gunicorn/Flask), database instance (Cassandra), and SSL certificate (Let's Encrypt) for HTTPS (essential for webcam access).</p>
+                </div>
+                 <div class="deployment-card fade-up">
+                    <i class="fas fa-cloud"></i>
+                    <h4>Alternative Platforms</h4>
+                    <p>Adaptable to other cloud providers (Azure, GCP) or PaaS solutions (Heroku, Replit) with appropriate configuration for dependencies and secure connections.</p>
+                 </div>
+                <div class="deployment-card fade-up">
+                     <i class="fas fa-building"></i>
+                    <h4>On-Premises Deployment</h4>
+                    <p>Can be hosted within an organization's internal network. Requires dedicated hardware, installation of all software dependencies (Python, DB, Web Server), and network configuration.</p>
+                </div>
+             </div>
+        </section>
+
+        <section id="enhancements" class="container">
+             <h2>Potential Enhancements</h2>
+            <div class="enhancements-content fade-up">
+                <i class="fas fa-lightbulb"></i>
+                <h3>Emotion Analysis</h3>
+                <p>Integrating emotion detection models could provide insights into employee sentiment and well-being. By analyzing facial expressions for indicators of stress, happiness, or fatigue, the system could potentially offer anonymized, aggregated feedback to management regarding the overall work environment mood, helping to identify systemic issues or periods of high pressure.</p>
+            </div>
+        </section>
+
+    </main>
 
     <footer>
       <p>Designed and developed by Ritik Dutta</p>
       <div class="social-icons">
-        <a href="https://github.com/ritikdutta/Company-work-environment-management" target="_blank" class='fa' style="font-size: 24px;">
-          &#xf09b;
+        <a href="https://github.com/ritikdutta/Company-work-environment-management" target="_blank" class='fa' title="GitHub">
+          
         </a>
-        <a href="https://www.linkedin.com/in/ritik-dutta-6037a6173/" target="_blank" class='fa' style="font-size: 24px;">
-          &#xf0e1;
+        <a href="https://www.linkedin.com/in/ritik-dutta-6037a6173/" target="_blank" class='fa' title="LinkedIn">
+          
         </a>
-        <a href="mailto:ritikduttagd@gmail.com?subject=Hello%20There&amp;body=I%20would%20like%20to%20get%20in%20touch%20with%20you" target="_blank" class='fa' style="font-size: 24px;">
-          &#xf1a0;
+        <a href="mailto:ritikduttagd@gmail.com?subject=Hello%20There&body=I%20would%20like%20to%20get%20in%20touch%20with%20you" target="_blank" class='fa' title="Email">
+          
         </a>
       </div>
     </footer>
 
     <script>
-        document.getElementById("get-started").addEventListener("click", function () {
-            // Handle "Get Started" button click event
-            // Add your custom logic here
-        });
+        document.addEventListener('DOMContentLoaded', () => {
+            const fadeElems = document.querySelectorAll('.fade-up');
 
-        document.getElementById("train-your-face").addEventListener("click", function () {
-            // Handle "Train Your Face" button click event
-            // Add your custom logic here
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.1
+            };
+
+            const observerCallback = (entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            };
+
+            const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+            fadeElems.forEach(elem => {
+                observer.observe(elem);
+            });
         });
     </script>
-</body>
 
+</body>
 </html>
